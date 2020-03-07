@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Lin&#39;s Notes</title>
+  
+  <subtitle>About IT Infra and Cloud</subtitle>
+  <link href="/atom.xml" rel="self"/>
+  
+  <link href="https://notes.yuanlinios.me/"/>
+  <updated>2020-03-07T10:26:06.486Z</updated>
+  <id>https://notes.yuanlinios.me/</id>
+  
+  <author>
+    <name>袁麟</name>
+    
+  </author>
+  
+  <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Hello World</title>
+    <link href="https://notes.yuanlinios.me/2020/03/07/hello-world/"/>
+    <id>https://notes.yuanlinios.me/2020/03/07/hello-world/</id>
+    <published>2020-03-07T10:26:06.486Z</published>
+    <updated>2020-03-07T10:26:06.486Z</updated>
+    
+    <content type="html"><![CDATA[<p>Welcome to <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="noopener">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="noopener">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="noopener">GitHub</a>.</p><a id="more"></a><h2 id="quick-start">Quick Start</h2><h3 id="create-a-new-post">Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">"My New Post"</span></span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="noopener">Writing</a></p><h3 id="run-server">Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="noopener">Server</a></p><h3 id="generate-static-files">Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="noopener">Generating</a></p><h3 id="deploy-to-remote-sites">Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure><p>More info: <a href="https://hexo.io/docs/one-command-deployment.html" target="_blank" rel="noopener">Deployment</a></p>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;Welcome to &lt;a href=&quot;https://hexo.io/&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Hexo&lt;/a&gt;! This is your very first post. Check &lt;a href=&quot;https://hexo.io/docs/&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;documentation&lt;/a&gt; for more info. If you get any problems when using Hexo, you can find the answer in &lt;a href=&quot;https://hexo.io/docs/troubleshooting.html&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;troubleshooting&lt;/a&gt; or you can ask me on &lt;a href=&quot;https://github.com/hexojs/hexo/issues&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;GitHub&lt;/a&gt;.&lt;/p&gt;
+    
+    </summary>
+    
+    
+    
+  </entry>
+  
+  <entry>
+    <title>Post-2</title>
+    <link href="https://notes.yuanlinios.me/2020/03/06/Post-2/"/>
+    <id>https://notes.yuanlinios.me/2020/03/06/Post-2/</id>
+    <published>2020-03-07T03:26:18.000Z</published>
+    <updated>2020-03-07T16:46:01.245Z</updated>
+    
+    <content type="html"><![CDATA[<p>test image reference <a id="more"></a></p><img src="/2020/03/06/Post-2/test.png" class="" title="test the image">]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;test image reference
+    
+    </summary>
+    
+    
+      <category term="vmware" scheme="https://notes.yuanlinios.me/categories/vmware/"/>
+    
+      <category term="nsx" scheme="https://notes.yuanlinios.me/categories/vmware/nsx/"/>
+    
+      <category term="aws" scheme="https://notes.yuanlinios.me/categories/aws/"/>
+    
+    
+      <category term="dev" scheme="https://notes.yuanlinios.me/tags/dev/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Test Post 1</title>
+    <link href="https://notes.yuanlinios.me/2020/03/06/Test-Post-1/"/>
+    <id>https://notes.yuanlinios.me/2020/03/06/Test-Post-1/</id>
+    <published>2020-03-06T16:01:55.000Z</published>
+    <updated>2020-03-07T15:55:13.476Z</updated>
+    
+    <content type="html"><![CDATA[<p>this is my first post</p><a id="more"></a><p>some more stuff <span class="math display">\[\frac{1+x}{\sqrt{1+x^2}}\]</span></p><div class="note info">            <p>what to say</p>          </div><blockquote class="blockquote-center">            <p>blah blah blah</p>          </blockquote>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;this is my first post&lt;/p&gt;
+    
+    </summary>
+    
+    
+    
+  </entry>
+  
+</feed>
