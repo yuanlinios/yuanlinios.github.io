@@ -1,55 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>Hello World</title>
-    <url>/2020/03/07/hello-world/</url>
-    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="noopener">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="noopener">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="noopener">GitHub</a>.</p>
+    <title>test post</title>
+    <url>/2020/03/06/test-post/</url>
+    <content><![CDATA[<p>This is a test post</p>
 <a id="more"></a>
-<h2 id="quick-start">Quick Start</h2>
-<h3 id="create-a-new-post">Create a new post</h3>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">"My New Post"</span></span><br></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="noopener">Writing</a></p>
-<h3 id="run-server">Run server</h3>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="noopener">Server</a></p>
-<h3 id="generate-static-files">Generate static files</h3>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="noopener">Generating</a></p>
-<h3 id="deploy-to-remote-sites">Deploy to remote sites</h3>
-<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html" target="_blank" rel="noopener">Deployment</a></p>
-]]></content>
-  </entry>
-  <entry>
-    <title>Post-2</title>
-    <url>/2020/03/06/Post-2/</url>
-    <content><![CDATA[<p>test image reference <a id="more"></a></p>
-<img src="/2020/03/06/Post-2/test.png" class="" title="test the image">
+<p>some more stuff</p>
 ]]></content>
       <categories>
-        <category>vmware</category>
-        <category>nsx</category>
-        <category>aws</category>
+        <category>cat 1</category>
       </categories>
       <tags>
-        <tag>dev</tag>
+        <tag>tag 1</tag>
+        <tag>tag 2</tag>
       </tags>
-  </entry>
-  <entry>
-    <title>Test Post 1</title>
-    <url>/2020/03/06/Test-Post-1/</url>
-    <content><![CDATA[<p>this is my first post</p>
-<a id="more"></a>
-<p>some more stuff <span class="math display">\[
-\frac{1+x}{\sqrt{1+x^2}}
-\]</span></p>
-<div class="note info">
-            <p>what to say</p>
-          </div>
-<blockquote class="blockquote-center">
-            <p>blah blah blah</p>
-
-          </blockquote>
-]]></content>
   </entry>
 </search>
