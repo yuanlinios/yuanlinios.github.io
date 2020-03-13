@@ -8,10 +8,7 @@
 <h2 id="创建-initiation-stack">创建 Initiation Stack</h2>
 <p>登入组织账号 (即这里的 yl-master), 进入 Cloudformation 服务. 创建一个新的 stack: <img src="create-initiation-stack.png"></p>
 <p>template s3 url 使用 https://s3.amazonaws.com/solutions-reference/aws-landing-zone/v2.3.1/aws-landing-zone-initiation.template</p>
-<div class="note info">
-            <p>Landing Zone Initiation stack 是一个比较庞大的 cloudformation template, 大约近 6000 行配置, 其核心部分是 5 个 Lambda 和 7 个 Step Functions. 但这并不是 Landing Zone 的全貌, 因为它还引用了很多外部资源. 在 Initiation stack template 中大部分内容 (约 2/3) 是 7 个 StateMachines (Step Functions) 的定义.</p>
-          </div>
-
+<p>Landing Zone Initiation stack 是一个比较庞大的 cloudformation template, 大约近 6000 行配置, 其核心部分是 5 个 Lambda 和 7 个 Step Functions. 但这还不是 Landing Zone 的全貌, 因为它引用了很多外部资源, 例如保存在 S3 里的 Lambda 函数实现. 在 Initiation stack template 中大部分内容 (约 2/3) 是 7 个 StateMachines (Step Functions) 的定义.</p>
 <div class="note info">
             <p>AWS 会对 Landing Zone 进行更新升级, 最新版本的信息可以从 https://aws.amazon.com/solutions/aws-landing-zone/ 获取</p>
           </div>
