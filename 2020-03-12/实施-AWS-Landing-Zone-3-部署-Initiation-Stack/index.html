@@ -20,25 +20,23 @@
     var CONFIG = {"hostname":"notes.yuanlinios.me","root":"/","scheme":"Mist","version":"7.7.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"disqus","storage":true,"lazyload":false,"nav":{"disqus":{"text":"Load Disqus","order":-1}},"activeClass":"disqus"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="本文介绍了 AWS 多账号管理的需求, Landing Zone 方案的背景及基本结构, Landing Zone 方案和 Control Tower 的对比与选择">
+  <meta name="description" content="本文将介绍 Landing Zone Initiation Stack 的部署, 参数解析以及一些容易出错的地方">
 <meta property="og:type" content="article">
-<meta property="og:title" content="实施 AWS Landing Zone 1: 背景及架构介绍">
-<meta property="og:url" content="https://notes.yuanlinios.me/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/index.html">
+<meta property="og:title" content="实施 AWS Landing Zone 3: 部署 Initiation Stack">
+<meta property="og:url" content="https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/index.html">
 <meta property="og:site_name" content="Lin&#39;s Notes">
-<meta property="og:description" content="本文介绍了 AWS 多账号管理的需求, Landing Zone 方案的背景及基本结构, Landing Zone 方案和 Control Tower 的对比与选择">
+<meta property="og:description" content="本文将介绍 Landing Zone Initiation Stack 的部署, 参数解析以及一些容易出错的地方">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://notes.yuanlinios.me/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/aws-landing-zone-architecture.png">
-<meta property="article:published_time" content="2020-03-08T14:37:50.000Z">
-<meta property="article:modified_time" content="2020-03-09T06:26:41.099Z">
+<meta property="og:image" content="https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/create-initiation-stack.png">
+<meta property="article:published_time" content="2020-03-12T16:42:14.000Z">
+<meta property="article:modified_time" content="2020-03-13T06:56:26.564Z">
 <meta property="article:author" content="L. Yuan">
 <meta property="article:tag" content="AWS">
 <meta property="article:tag" content=" Landing Zone">
-<meta property="article:tag" content=" Organization">
-<meta property="article:tag" content=" Control Tower">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://notes.yuanlinios.me/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/aws-landing-zone-architecture.png">
+<meta name="twitter:image" content="https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/create-initiation-stack.png">
 
-<link rel="canonical" href="https://notes.yuanlinios.me/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/">
+<link rel="canonical" href="https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/">
 
 
 <script id="page-configurations">
@@ -50,7 +48,7 @@
   };
 </script>
 
-  <title>实施 AWS Landing Zone 1: 背景及架构介绍 | Lin's Notes</title>
+  <title>实施 AWS Landing Zone 3: 部署 Initiation Stack | Lin's Notes</title>
   
 
 
@@ -206,7 +204,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/">
+    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -219,7 +217,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          实施 AWS Landing Zone 1: 背景及架构介绍
+          实施 AWS Landing Zone 3: 部署 Initiation Stack
         </h2>
 
         <div class="post-meta">
@@ -228,16 +226,10 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
+              
 
-              <time title="创建时间：2020-03-08 22:37:50" itemprop="dateCreated datePublished" datetime="2020-03-08T22:37:50+08:00">2020-03-08</time>
+              <time title="创建时间：2020-03-13 00:42:14 / 修改时间：14:56:26" itemprop="dateCreated datePublished" datetime="2020-03-13T00:42:14+08:00">2020-03-13</time>
             </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-03-09 14:26:41" itemprop="dateModified" datetime="2020-03-09T14:26:41+08:00">2020-03-09</time>
-              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="fa fa-folder-o"></i>
@@ -268,8 +260,8 @@
       </span>
       <span class="post-meta-item-text">Disqus：</span>
     
-    <a title="disqus" href="/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/#disqus_thread" itemprop="discussionUrl">
-      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020-03-08/实施-AWS-Landing-Zone-1-背景及架构介绍/" itemprop="commentCount"></span>
+    <a title="disqus" href="/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020-03-12/实施-AWS-Landing-Zone-3-部署-Initiation-Stack/" itemprop="commentCount"></span>
     </a>
   </span>
   
@@ -279,14 +271,14 @@
                 <i class="fa fa-file-word-o"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>1.8k</span>
+              <span>3.4k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
                 <i class="fa fa-clock-o"></i>
               </span>
                 <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>2 分钟</span>
+              <span>3 分钟</span>
             </span>
 
         </div>
@@ -298,47 +290,71 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p>本文介绍了 AWS 多账号管理的需求, Landing Zone 方案的背景及基本结构, Landing Zone 方案和 Control Tower 的对比与选择</p>
+        <p>本文将介绍 Landing Zone Initiation Stack 的部署, 参数解析以及一些容易出错的地方</p>
 <a id="more"></a>
-<h2 id="多账户的需求和面临的挑战">多账户的需求和面临的挑战</h2>
-<p>随着越来越多的工作负载迁移到 AWS 公有云, 过去的单个账户逐渐无法满足复杂环境的需要: 难以清晰界定的职责边界, 资源无法有效隔离, 对不同部门团队的计费和审计等. 此时会自然而然的引入多账户策略: 不同部门/团队, 不同环境使用不同的 AWS 账号. 优点很明显</p>
-<ul>
-<li>降低触及单个账户资源上限的风险</li>
-<li>不同团队的职责分离</li>
-<li>开发/测试/生产环境的资源隔离</li>
-<li>减少人为故障的影响范围</li>
-</ul>
-<p>AWS Organization 提供了多账户环境的基础. 然而创建账户, 加入组织并完成初始化基线配置是一项繁琐的工作. 如何确保各个账户的合规性和配置的一致性? 如果后期配置基线发生变更, 又如何将基线变更追溯的应用到所有的现存账户上? Landing Zone 方案旨在解决这些问题.</p>
-<h2 id="landing-zone-简介">Landing Zone 简介</h2>
-<p>Landing Zone 是 AWS 在 2018 年推出的一套解决方案 (注意: 并不是一个 AWS 原生服务), 用来帮助用户根据 AWS 最佳实践, 快速建立安全的多账户环境</p>
-<p><img src="aws-landing-zone-architecture.png"></p>
-<p>上图为 Landing Zone 的基本结构:</p>
-<ul>
-<li>核心账户: master, shared services, log archive, security
-<ul>
-<li>Master: 也称为 Organization account. 是创建 AWS Organization, Landing Zone 基础组件 (Service Catalog, CodePipeline, State Machines) 的地方</li>
-<li>Shared Services: 公共服务所在的账号</li>
-<li>Log Archive: 存放所有账户 Cloudtrail 和 Config log的 S3 bucket 所在的账户</li>
-<li>Security: Guarduty master 所在账户, 全局 admin/readonly 角色所在账户</li>
-</ul></li>
-<li>Accounting Vending Machine (AVM): 是 Landing Zone 在 Service Catalog 里创建的一个产品, 通过运行 AVM 来创建新账户并应用配置基线</li>
-<li>Landing Zone Codepipline: 配置变更流水线. 触发该流水线来更改核心账户资源, Service Control Policies 和基线资源等. 该流水线最终会调用 AVM 将基线资源变更应用到所有账户上</li>
-</ul>
-<p>各个组件/服务更深入的介绍将在后续的系列文章中给出.</p>
-<h2 id="control-tower-还是-landing-zone">Control Tower 还是 Landing Zone?</h2>
-<p>Landing Zone方案涉及多种AWS服务, 其部署较为复杂, 因此在 2019 年 AWS 推出了 Control Tower 服务, 旨在帮助用户通过最简单的方式设置<strong>全新</strong>的多账户 AWS 环境. 其背后依然是 Landing Zone, 但是隐藏了实现细节和基础服务.</p>
-<p>用户在实际生产环境下该如何选择?</p>
-<ul>
-<li>Control Tower 只适用于全新部署 (greenfield). 如果你已经建立了多账户的环境 (Organization, SSO), 又不想迁移账户, 此时应该选择 Landing Zone</li>
-<li>Landing Zone 具有更强的定制化 (当然这也正是它更加复杂的原因), 所有的基线资源都通过 Cloudformation template 创建, 用户可以方便的修改预设基线资源或者添加自定义资源</li>
-<li>Landing Zone提供了 CI/CD 流水线, 用户可以将其配置保存在代码仓库中以实现版本控制</li>
-</ul>
-<h2 id="在现存多账户环境下实施-landing-zone">在现存多账户环境下实施 Landing Zone</h2>
-<p>由于实际环境的复杂性, Landing Zone 方案在实施 AWS 最佳实践的同时, 不可避免的会对用户的环境做一些假设, 因此其部署的某些服务或者服务的设置对特定的用户可能并不适用. 此时需要对其预设配置进行调整.</p>
-<p>举个例子, 默认 Landing Zone 会在所有账号和共享服务账号 (shared services account) 之间做 VPC peering 以便所有账户可以访问共享服务账号中的公共服务. 然而 VPC peering 本身有诸多限制, 企业环境下可能更多会选择 transit VPC 架构或者使用 transit gateway. 此时用户需要修改 Landing Zone 配置模板以匹配自身环境. 在系列的后续文章中我将逐一列示.</p>
-<div class="note warning">
-            <p>AWS 声明 Landing Zone 必须由客户的 AWS account 团队或者经过认证的合作伙伴来部署, 以确保方案的实施成功. 如果你想自己实施, 请自行评估风险</p>
+<h2 id="创建-initiation-stack">创建 Initiation Stack</h2>
+<p>登入组织账号 (即这里的 yl-master), 进入 Cloudformation 服务. 创建一个新的 stack: <img src="create-initiation-stack.png"></p>
+<p>template s3 url 使用 https://s3.amazonaws.com/solutions-reference/aws-landing-zone/v2.3.1/aws-landing-zone-initiation.template</p>
+<div class="note info">
+            <p>Landing Zone Initiation stack 是一个比较庞大的 cloudformation template, 大约近 6000 行配置, 其核心部分是 5 个 Lambda 和 7 个 Step Functions. 但这并不是 Landing Zone 的全貌, 因为它还引用了很多外部资源. 在 Initiation stack template 中大部分内容 (约 2/3) 是 7 个 StateMachines (Step Functions) 的定义.</p>
           </div>
+
+<div class="note info">
+            <p>AWS 会对 Landing Zone 进行更新升级, 最新版本的信息可以从 https://aws.amazon.com/solutions/aws-landing-zone/ 获取</p>
+          </div>
+<h3 id="参数详解">参数详解</h3>
+<h4 id="landing-zone-core-account-configuration">Landing Zone Core Account Configuration</h4>
+<p>核心账号配置部分</p>
+<ul>
+<li>Shared Service Account Email Address: 填写现存共享服务账号的邮件地址. 如果你的现存环境中还没有共享服务账号也没关系, 如果有需要, Landing Zone 可以帮你创建</li>
+<li>Log Archive Account Email Address: 填写现存的日志账号邮件地址. 同上</li>
+<li>Security Account Email Address: 填写现存的安全审计账号的邮件地址. 同上</li>
+<li>Nest OU Name Delimiter: Colon (:) 使用冒号作为 OU 路径的界定符. 保持默认即可</li>
+<li>Core OU Name: vopsdev-landing-zone:core 根据上一篇文章中的 OU 规划来填写, 这里是核心账号所在的 OU</li>
+<li>Non Core OU Names: vopsdev-landing-zone:production,vopsdev-landing-zone:department,vopsdev-landing-zone:staging,vopsdev-landing-zone:sandbox 根据上一篇文章中的 OU 规划来写, 这里是非核心账号所在的 OU. 使用逗号作为分隔符</li>
+<li>Security Alert Email Address: 接受安全告警邮件的地址. 具体是来自 GuardDuty Finding, Cloudwatch Alarm, Config Rules Compliance Status Change 的消息</li>
+<li>Lock StackSetsExecution Role: Yes. 是否锁定角色 AWSCloudFormationStackSetExecutionRole. Landing Zone 通过 Stackset 来部署资源基线到各个受控账号, 因此会在各个账号下创建角色 AWSCloudFormationStackSetExecutionRole 来执行 stack instance. 该角色具有账户的管理员权限. 锁定该角色的含义是只允许特定的实体 (principal) 来承担 (assume role).</li>
+<li>Subscribe All Change Events Email To Topic: No. 是否订阅所有的配置变更事件. 按需设置</li>
+<li>All Change Events Email: 接受配置变更事件通知的邮件地址</li>
+</ul>
+<h4 id="landing-zone-pipeline-configuration">Landing Zone Pipeline Configuration</h4>
+<p>流水线配置部分</p>
+<ul>
+<li>Pipeline Approval Stage: Yes. 给 Landing Zone 配置流水线添加手动批准的步骤</li>
+<li>Pipeline Approval Email Address: 批准 Landing Zone 配置流水线的邮件地址</li>
+<li>Auto Build Landing Zone: No. 是否在 initiation stack 创建完成后立刻启动配置流水线. 我们需要对配置进行定制, 因此这里一定需要设置为 No</li>
+</ul>
+<h4 id="shared-services-vpc-configuration">Shared Services VPC Configuration</h4>
+<p>共享服务的 VPC 配置部分</p>
+<ul>
+<li>Shared Services VPC Options: Shared-Services-Network-3-AZs. 选择共享服务账号的 VPC 类型. 仅仅用来生成初始配置. 并不会在 Initiation 阶段创建实际的资源. 后面可以按自己的需要修改初始配置</li>
+<li>Shared Services VPC CIDR: 100.65.0.0/16 共享服务 VPC 的网段. 同上</li>
+</ul>
+<h4 id="vpc-flow-logs-retention-policy">VPC Flow Logs Retention Policy</h4>
+<p>VPC Flow Logs 的留存策略</p>
+<ul>
+<li>VPC Flow Logs Retention In Days: 90</li>
+</ul>
+<h4 id="aws-security-and-configuration-services">AWS Security and Configuration Services</h4>
+<p>安全和配置管理部分</p>
+<ul>
+<li>Enable AWS Security and Configuraiton Monitoring in: All regions 在哪些区域启用安全和配置管理服务 (GuardDuty, Config 之类). 同样也仅仅用于生成初始化配置. 后期可以按需要修改</li>
+</ul>
+<h4 id="aws-config-rules">AWS Config Rules</h4>
+<p>启用哪些 AWS Config Rules. 按默认都启用即可</p>
+<h4 id="add-on-publisher-configuraiton">Add-On Publisher Configuraiton</h4>
+<p>Add-On 产品更新配置部分</p>
+<ul>
+<li>AWS Manages Service Catalog Add-On Portfolio? Manual Updates 手动管理 Add-On Portfolio 的版本更新</li>
+<li>Add-On Update Notification Email: Add-On 更新通知的邮件地址. 按需设置</li>
+</ul>
+<h2 id="关于通知邮件地址">关于通知邮件地址</h2>
+<h3 id="结论">结论</h3>
+<p>不同的 AWS 账号需要不同的邮件地址, 这基本不会出错. 但是在部署 Landing Zone Initiation stack 时需要注意 Security Account Email Address 的邮件地址不能用来接收 Security Alert. 即 Security Alert Email Address 和 Security Account Email Address 不能是同一个.</p>
+<h3 id="具体原因">具体原因</h3>
+<p>Initiaton stack 中有这样的资源定义</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">LandingZoneConfigDeployer:</span></span><br><span class="line">  <span class="attr">Type:</span> <span class="string">Custom::ConfigDeployer</span></span><br><span class="line">  <span class="attr">Properties:</span></span><br><span class="line">    <span class="attr">metrics_flag:</span> <span class="type">!FindInMap</span> <span class="string">[Solution,</span> <span class="string">Metrics,</span> <span class="string">SendAnonymousData]</span></span><br><span class="line">    <span class="attr">email_list:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="type">!Ref</span> <span class="string">SharedServicesAccountEmail</span></span><br><span class="line">      <span class="bullet">-</span> <span class="type">!Ref</span> <span class="string">LoggingAccountEmail</span></span><br><span class="line">      <span class="bullet">-</span> <span class="type">!Ref</span> <span class="string">SecurityAccountEmail</span></span><br><span class="line">      <span class="bullet">-</span> <span class="type">!Ref</span> <span class="string">SecurityAlertEmail</span></span><br></pre></td></tr></table></figure>
+<p>而 Lambda 函数 LandingZoneDeploymentLambda 的 config_deployer.py 中会检查 email_list 中是否有重复地址 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">unique_email_validator</span><span class="params">(email_list)</span>:</span></span><br><span class="line">    result = set([x <span class="keyword">for</span> x <span class="keyword">in</span> email_list <span class="keyword">if</span> email_list.count(x) &gt; <span class="number">1</span>])</span><br><span class="line">    duplicate_list = list(result)</span><br><span class="line">    logger.info(<span class="string">"Duplicate Emails: &#123;&#125;"</span>.format(duplicate_list))</span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">not</span> duplicate_list:</span><br><span class="line">        logger.info(<span class="string">"Duplicate emails not found"</span>)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="keyword">raise</span> Exception(<span class="string">"Found duplicate email(s) &#123;&#125; in the parameters."</span>.format(duplicate_list))</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">config_deployer</span><span class="params">(event)</span>:</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        s3 = S3(logger)</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment"># Check if the emails are Unique</span></span><br><span class="line">    unique_email_validator(event.get(<span class="string">'email_list'</span>))</span><br></pre></td></tr></table></figure></p>
 
     </div>
 
@@ -354,7 +370,7 @@
   </li>
   <li class="post-copyright-link">
     <strong>本文链接：</strong>
-    <a href="https://notes.yuanlinios.me/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/" title="实施 AWS Landing Zone 1: 背景及架构介绍">https://notes.yuanlinios.me/2020-03-08/实施-AWS-Landing-Zone-1-背景及架构介绍/</a>
+    <a href="https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/" title="实施 AWS Landing Zone 3: 部署 Initiation Stack">https://notes.yuanlinios.me/2020-03-12/实施-AWS-Landing-Zone-3-部署-Initiation-Stack/</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="external nofollow noopener noreferrer" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -374,11 +390,11 @@
 
         
     <div class="post-nav">
-      <div class="post-nav-item"></div>
       <div class="post-nav-item">
-    <a href="/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-2-%E5%AE%9E%E6%96%BD%E5%89%8D%E5%9C%BA%E6%99%AF%E4%B8%8E%E7%9B%AE%E6%A0%87%E8%A7%84%E5%88%92/" rel="next" title="实施 AWS Landing Zone 2: 实施前场景与目标规划">
-      实施 AWS Landing Zone 2: 实施前场景与目标规划 <i class="fa fa-chevron-right"></i>
+    <a href="/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-2-%E5%AE%9E%E6%96%BD%E5%89%8D%E5%9C%BA%E6%99%AF%E4%B8%8E%E7%9B%AE%E6%A0%87%E8%A7%84%E5%88%92/" rel="prev" title="实施 AWS Landing Zone 2: 实施前场景与目标规划">
+      <i class="fa fa-chevron-left"></i> 实施 AWS Landing Zone 2: 实施前场景与目标规划
     </a></div>
+      <div class="post-nav-item"></div>
     </div>
       </footer>
     
@@ -445,7 +461,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#多账户的需求和面临的挑战"><span class="nav-number">1.</span> <span class="nav-text">多账户的需求和面临的挑战</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#landing-zone-简介"><span class="nav-number">2.</span> <span class="nav-text">Landing Zone 简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#control-tower-还是-landing-zone"><span class="nav-number">3.</span> <span class="nav-text">Control Tower 还是 Landing Zone?</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#在现存多账户环境下实施-landing-zone"><span class="nav-number">4.</span> <span class="nav-text">在现存多账户环境下实施 Landing Zone</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#创建-initiation-stack"><span class="nav-number">1.</span> <span class="nav-text">创建 Initiation Stack</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#参数详解"><span class="nav-number">1.1.</span> <span class="nav-text">参数详解</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#landing-zone-core-account-configuration"><span class="nav-number">1.1.1.</span> <span class="nav-text">Landing Zone Core Account Configuration</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#landing-zone-pipeline-configuration"><span class="nav-number">1.1.2.</span> <span class="nav-text">Landing Zone Pipeline Configuration</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#shared-services-vpc-configuration"><span class="nav-number">1.1.3.</span> <span class="nav-text">Shared Services VPC Configuration</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#vpc-flow-logs-retention-policy"><span class="nav-number">1.1.4.</span> <span class="nav-text">VPC Flow Logs Retention Policy</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#aws-security-and-configuration-services"><span class="nav-number">1.1.5.</span> <span class="nav-text">AWS Security and Configuration Services</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#aws-config-rules"><span class="nav-number">1.1.6.</span> <span class="nav-text">AWS Config Rules</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#add-on-publisher-configuraiton"><span class="nav-number">1.1.7.</span> <span class="nav-text">Add-On Publisher Configuraiton</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#关于通知邮件地址"><span class="nav-number">2.</span> <span class="nav-text">关于通知邮件地址</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#结论"><span class="nav-number">2.1.</span> <span class="nav-text">结论</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#具体原因"><span class="nav-number">2.2.</span> <span class="nav-text">具体原因</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -615,9 +631,9 @@
 </script>
 <script>
   var disqus_config = function() {
-    this.page.url = "https://notes.yuanlinios.me/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/";
-    this.page.identifier = "2020-03-08/实施-AWS-Landing-Zone-1-背景及架构介绍/";
-    this.page.title = "实施 AWS Landing Zone 1: 背景及架构介绍";
+    this.page.url = "https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/";
+    this.page.identifier = "2020-03-12/实施-AWS-Landing-Zone-3-部署-Initiation-Stack/";
+    this.page.title = "实施 AWS Landing Zone 3: 部署 Initiation Stack";
     };
   NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
     if (window.DISQUS) {
