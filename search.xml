@@ -36,7 +36,7 @@
 <p>准备一个镜像列表, 然后使用 <code>oc image mirror</code>将镜像同步到私有仓库中</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">cat sample-images.txt | <span class="keyword">while</span> <span class="built_in">read</span> line; <span class="keyword">do</span></span><br><span class="line">  target=$(<span class="built_in">echo</span> <span class="variable">$line</span> | sed <span class="string">'s/registry.redhat.io/quay.svc.vopsdev.com/'</span>)</span><br><span class="line">  oc image mirror -a <span class="variable">$&#123;LOCAL_SECRET_JSON&#125;</span> <span class="variable">$line</span> <span class="variable">$target</span></span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
 <p>完整的镜像列表如何获取? 如果之前装过 OCP 4.3.5, 把 openshift-cluster-samples-operator 项目下 cluster-samples-operator pod 的 /opt/openshift 目录同步出来, 简单 grep 一下就都有了.</p>
-<p>完整列表参考<a href="https://gist.github.com/yuanlinios/7eea8207083e649cbe07e108a22df00b" target="_blank" rel="external nofollow noopener noreferrer">这里</a> <script src="//gist.github.com/7eea8207083e649cbe07e108a22df00b.js"></script></p>
+<p>完整列表参考<a href="https://gist.github.com/yuanlinios/7eea8207083e649cbe07e108a22df00b" target="_blank" rel="external nofollow noopener noreferrer">这里</a></p>
 <h2 id="准备-operatorhub-离线资源">准备 OperatorHub 离线资源</h2>
 <p>首先构建 RedHat Operators 的 catalog image, 保存为 quay.svc.vopsdev.com/devinfra/redhat-operators:v1.</p>
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">oc adm catalog build --appregistry-endpoint https://quay.io/cnr --appregistry-org redhat-operators --to=quay.svc.vopsdev.com/devinfra/redhat-operators:v1</span><br></pre></td></tr></table></figure>
