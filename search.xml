@@ -34,7 +34,7 @@
 <li>USERNAME: 就是前面配置的 IAM 服务账号 landing-zone-repo-mirror 下 HTTPS Git credentials for AWS CodeCommit 的用户名</li>
 <li>DEST_REPO: AWS CodeCommit 代码库位置, 例如 git-codecommit.us-west-2.amazonaws.com/v1/repos/landing-zone-configuration</li>
 <li>SECRET: landing-zone-repo-mirror 下 HTTPS Git credentials for AWS CodeCommit 的密码. 注意特殊字符转义</li>
-<li>SOURCE_REPO: 内部代码库位置, 例如 gitlab.tlscontact.com/systems/landing-zone-configuration.git</li>
+<li>SOURCE_REPO: 内部代码库位置, 例如 gitlab.svc.vopsdev.com/devinfra/landing-zone-configuration.git</li>
 <li>TOKEN_NAME, TOKEN_VALUE: 这里使用 deploy token 来获取私有代码库</li>
 </ul>
 ]]></content>
