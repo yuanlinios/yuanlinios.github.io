@@ -59,7 +59,6 @@
 <ul>
 <li>Nexus 目前还不支持 manifest list: <a href="https://issues.sonatype.org/browse/NEXUS-18546" target="_blank" rel="external nofollow noopener noreferrer">NEXUS-18546</a></li>
 <li>Harbor 目前还不支持 manifest list: <a href="https://github.com/goharbor/harbor/issues/6522" target="_blank" rel="external nofollow noopener noreferrer">6522</a></li>
-<li>Docker registry 支持, 但是没有管理界面. 如果使用 docker registry 作为私有源, 确保启用 TLS</li>
 </ul>
 <h2 id="关于镜像的获取">关于镜像的获取</h2>
 <p>发现很多人误以为必须联系红帽销售, 签单之后才可以试用 OCP4, 实际上并不是这样. 注册一个<a href="https://developers.redhat.com" target="_blank" rel="external nofollow noopener noreferrer">开发者账号</a> 后就可以获得 quay.io, registry.redhat.io 的 pull secret 来进行测试实验了.</p>
