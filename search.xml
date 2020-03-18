@@ -1,6 +1,162 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>离线部署 Openshift Container Platform 4.3 - 2: 初始安装</title>
+    <url>/2020-03-16/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-2-%E5%88%9D%E5%A7%8B%E5%AE%89%E8%A3%85/</url>
+    <content><![CDATA[<p>本文记录了离线环境下以 UPI (User Provisioned Infrastructure) 模式初始安装 OCP 4.3.5 集群的步骤, 包括地址/DNS 名称规划, DHCP, 负载均衡配置, ignition 文件生成, 到最后的集群部署.</p>
+<p>IaaS 平台为 VMware vSphere 6.7U2. DDI 方案使用 Infoblox NIOS. 负载均衡方案使用 HAProxy</p>
+<a id="more"></a>
+<h2 id="dns-及-ip-地址规划">DNS 及 IP 地址规划</h2>
+<table>
+<colgroup>
+<col style="width: 31%">
+<col style="width: 5%">
+<col style="width: 27%">
+<col style="width: 35%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>DNS 记录</th>
+<th>类型</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ocp-bootstrap.int.vopsdev.com</td>
+<td>A</td>
+<td>192.168.11.119</td>
+<td>bootstrap 节点. A 记录对应的 PTR 记录也同时创建出来, 下同</td>
+</tr>
+<tr class="even">
+<td>ocp-node-0.int.vopsdev.com</td>
+<td>A</td>
+<td>192.168.11.120</td>
+<td>master 节点</td>
+</tr>
+<tr class="odd">
+<td>ocp-node-1.int.vopsdev.com</td>
+<td>A</td>
+<td>192.168.11.121</td>
+<td>master 节点</td>
+</tr>
+<tr class="even">
+<td>ocp-node-2.int.vopsdev.com</td>
+<td>A</td>
+<td>192.168.11.122</td>
+<td>master 节点</td>
+</tr>
+<tr class="odd">
+<td>ocp-node-3.int.vopsdev.com</td>
+<td>A</td>
+<td>192.168.11.123</td>
+<td>worker 节点</td>
+</tr>
+<tr class="even">
+<td>ocp-node-4.int.vopsdev.com</td>
+<td>A</td>
+<td>192.168.11.124</td>
+<td>worker 节点</td>
+</tr>
+<tr class="odd">
+<td>ocp-node-5.int.vopsdev.com</td>
+<td>A</td>
+<td>192.168.11.125</td>
+<td>worker 节点</td>
+</tr>
+<tr class="even">
+<td>api.ocp.vopsdev.com</td>
+<td>CNAME</td>
+<td>lb-if-192-168-11-249.int.vopsdev.com</td>
+<td>别名, 指向现有的 LB 记录</td>
+</tr>
+<tr class="odd">
+<td>api-int.ocp.vopsdev.com</td>
+<td>CNAME</td>
+<td>lb-if-192-168-11-249.int.vopsdev.com</td>
+<td>如果有需要, api 和 api-int 可以分别指向内部/外部 LB</td>
+</tr>
+<tr class="even">
+<td>*.apps.ocp.vopsdev.com</td>
+<td>CNAME</td>
+<td>lb-if-192-168-11-249.int.vopsdev.com</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>etcd-0.ocp.vopsdev.com</td>
+<td>CNAME</td>
+<td>ocp-node-0.int.vopsdev.com</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>etcd-1.ocp.vopsdev.com</td>
+<td>CNAME</td>
+<td>ocp-node-1.int.vopsdev.com</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>etcd-2.ocp.vopsdev.com</td>
+<td>CNAME</td>
+<td>ocp-node-2.int.vopsdev.com</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>_etcd-server-ssl._tcp.ocp.vopsdev.com</td>
+<td>SRV</td>
+<td>0 10 2380 etcd-0.ocp.vopsdev.com</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>_etcd-server-ssl._tcp.ocp.vopsdev.com</td>
+<td>SRV</td>
+<td>0 10 2380 etcd-1.ocp.vopsdev.com</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>_etcd-server-ssl._tcp.ocp.vopsdev.com</td>
+<td>SRV</td>
+<td>0 10 2380 etcd-2.ocp.vopsdev.com</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="dhcp">DHCP</h2>
+<p>所有 OCP 节点都通过 DHCP 自动获取 IP. DHCP 上做预留 (在 Infoblox 里叫 fixed address), 确保每个节点都可以获取预先规划的地址.</p>
+<p><img src="infoblox-ocp-dhcp-fixed-addresses.png"></p>
+<p>由于节点 MAC 地址要在虚拟机部署之后才能确定, 这里先随便填写. 后面部署节点时会通过 Infoblox API 动态更新 fixed address 记录的 MAC 字段.</p>
+<h2 id="负载均衡">负载均衡</h2>
+<p>负载均衡器目前使用是 HAProxy, 简单写几个四层 LB 配置 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">frontend vs_ocp_master_6443</span><br><span class="line">    mode tcp</span><br><span class="line">    option tcplog</span><br><span class="line">    <span class="built_in">bind</span> 192.168.11.249:6443</span><br><span class="line">    default_backend pl_ocp_master_6443</span><br><span class="line"></span><br><span class="line">frontend vs_ocp_master_22623</span><br><span class="line">    mode tcp</span><br><span class="line">    option tcplog</span><br><span class="line">    <span class="built_in">bind</span> 192.168.11.249:22623</span><br><span class="line">    default_backend pl_ocp_master_22623</span><br><span class="line"></span><br><span class="line">frontend vs_ocp_router_80</span><br><span class="line">    mode tcp</span><br><span class="line">    option tcplog</span><br><span class="line">    <span class="built_in">bind</span> 192.168.11.249:80</span><br><span class="line">    default_backend pl_ocp_router_80</span><br><span class="line"></span><br><span class="line">frontend vs_ocp_router_443</span><br><span class="line">    mode tcp</span><br><span class="line">    option tcplog</span><br><span class="line">    <span class="built_in">bind</span> 192.168.11.249:443</span><br><span class="line">    default_backend pl_ocp_router_443</span><br><span class="line"></span><br><span class="line">backend pl_ocp_master_6443</span><br><span class="line">    mode tcp</span><br><span class="line">    balance <span class="built_in">source</span></span><br><span class="line">    server ocp-node-0 ocp-node-0.int.vopsdev.com:6443 check</span><br><span class="line">    server ocp-node-1 ocp-node-1.int.vopsdev.com:6443 check</span><br><span class="line">    server ocp-node-2 ocp-node-2.int.vopsdev.com:6443 check</span><br><span class="line">    server ocp-bootstrap ocp-bootstrap.int.vopsdev.com:6443 check</span><br><span class="line"></span><br><span class="line">backend pl_ocp_master_22623</span><br><span class="line">    mode tcp</span><br><span class="line">    balance <span class="built_in">source</span></span><br><span class="line">    server ocp-node-0 ocp-node-0.int.vopsdev.com:22623 check</span><br><span class="line">    server ocp-node-1 ocp-node-1.int.vopsdev.com:22623 check</span><br><span class="line">    server ocp-node-2 ocp-node-2.int.vopsdev.com:22623 check</span><br><span class="line">    server ocp-bootstrap ocp-bootstrap.int.vopsdev.com:22623 check</span><br><span class="line"></span><br><span class="line">backend pl_ocp_router_80</span><br><span class="line">    mode tcp</span><br><span class="line">    balance <span class="built_in">source</span></span><br><span class="line">    server ocp-node-3 ocp-node-3.int.vopsdev.com:80 check</span><br><span class="line">    server ocp-node-4 ocp-node-4.int.vopsdev.com:80 check</span><br><span class="line">    server ocp-node-5 ocp-node-5.int.vopsdev.com:80 check</span><br><span class="line"></span><br><span class="line">backend pl_ocp_router_443</span><br><span class="line">    mode tcp</span><br><span class="line">    balance <span class="built_in">source</span></span><br><span class="line">    server ocp-node-3 ocp-node-3.int.vopsdev.com:443 check</span><br><span class="line">    server ocp-node-4 ocp-node-4.int.vopsdev.com:443 check</span><br><span class="line">    server ocp-node-5 ocp-node-5.int.vopsdev.com:443 check</span><br></pre></td></tr></table></figure></p>
+<h2 id="准备-ignition-文件">准备 ignition 文件</h2>
+<h3 id="编写-install-config.yaml">编写 install-config.yaml</h3>
+<p>根据环境的实际情况编写 install-config.yaml. 下面是我的实验环境所使用的版本 <figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">baseDomain:</span> <span class="string">vopsdev.com</span></span><br><span class="line"><span class="attr">compute:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">hyperthreading:</span> <span class="string">Enabled</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">worker</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">0</span></span><br><span class="line"><span class="attr">controlPlane:</span></span><br><span class="line">  <span class="attr">hyperthreading:</span> <span class="string">Enabled</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">master</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">3</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">ocp</span></span><br><span class="line"><span class="attr">platform:</span></span><br><span class="line">  <span class="attr">vsphere:</span></span><br><span class="line">    <span class="attr">vcenter:</span> <span class="string">vc.int.vopsdev.com</span></span><br><span class="line">    <span class="attr">username:</span> <span class="string">xxx</span></span><br><span class="line">    <span class="attr">password:</span> <span class="string">xxx</span></span><br><span class="line">    <span class="attr">datacenter:</span> <span class="string">HDC</span></span><br><span class="line">    <span class="attr">defaultDatastore:</span> <span class="string">DS-SHARED</span></span><br><span class="line"><span class="attr">fips:</span> <span class="literal">false</span></span><br><span class="line"><span class="attr">networking:</span></span><br><span class="line">  <span class="attr">networkType:</span> <span class="string">OpenShiftSDN</span></span><br><span class="line">  <span class="attr">clusterNetworks:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">cidr:</span> <span class="number">10.9</span><span class="number">.0</span><span class="number">.0</span><span class="string">/20</span></span><br><span class="line">    <span class="attr">hostPrefix:</span> <span class="number">24</span></span><br><span class="line">  <span class="attr">serviceNetwork:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="number">172.16</span><span class="number">.0</span><span class="number">.0</span><span class="string">/20</span></span><br><span class="line"><span class="attr">sshKey:</span> <span class="string">'ssh-rsa ...'</span></span><br><span class="line"><span class="attr">additionalTrustBundle:</span> <span class="string">|</span></span><br><span class="line">  <span class="string">-----BEGIN</span> <span class="string">CERTIFICATE-----</span></span><br><span class="line">  <span class="string">...</span></span><br><span class="line">  <span class="string">-----END</span> <span class="string">CERTIFICATE-----</span></span><br><span class="line"><span class="attr">imageContentSources:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">mirrors:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">quay.svc.vopsdev.com/openshift-release-dev/ocp-v4.0-aart-dev</span></span><br><span class="line">  <span class="attr">source:</span> <span class="string">quay.io/openshift-release-dev/ocp-release</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">mirrors:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">quay.svc.vopsdev.com/openshift-release-dev/ocp-v4.0-art-dev</span></span><br><span class="line">  <span class="attr">source:</span> <span class="string">quay.io/openshift-release-dev/ocp-v4.0-art-dev</span></span><br><span class="line"><span class="attr">pullSecret:</span> <span class="string">'&#123;"auths":&#123;...&#125;&#125;'</span></span><br></pre></td></tr></table></figure></p>
+<p>一些注释</p>
+<ul>
+<li>metadata.name + baseDomain 组成集群的基础域名, 这里是 ocp.vopsdev.com</li>
+<li>需要在 vSphere Datacenter 下按照 metadata.name 建立一个虚拟机目录, 将来创建 vSphere 动态卷需要, 具体原因看<a href="https://github.com/vmware-arhive/kubernetes/issues/499" target="_blank" rel="external nofollow noopener noreferrer">这里</a>. 然而你并不需要将 OCP 节点放到这个虚拟机目录下</li>
+<li>platform 下的 vcenter 信息主要用于动态卷的创建, 确保这个用户有足够的权限, 具体看<a href="https://vmware.github.io/vsphere-storage-for-kubernetes/documentation/vcp-roles.html" target="_blank" rel="external nofollow noopener noreferrer">这里</a></li>
+<li>我的环境有私有 PKI, 所有的服务器证书由二级 CA 签发, 因此把根 CA 的证书放到 additionalTrustBundle 里</li>
+<li>imageContentSources 来自<code>oc adm release mirror</code> 的输出结果</li>
+<li>我的 quay 私有镜像库不允许匿名拉取, 因此提供了 pullSecret</li>
+</ul>
+<h3 id="生成-ignition">生成 ignition</h3>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">rm -rf assets; mkdir assets</span><br><span class="line">cp install-config.yaml assets/</span><br><span class="line">./openshift-install create manifests --dir=assets</span><br><span class="line">sed -i <span class="string">'s/mastersSchedulable: true/mastersSchedulable: false/'</span> assets/manifests/cluster-scheduler-02-config.yml</span><br><span class="line"></span><br><span class="line"><span class="comment"># 配置一下时间同步服务. 我这里两个 ntp 服务器是 192.168.11.2 和 192.168.255.249</span></span><br><span class="line">chrony_config=$(<span class="built_in">echo</span> -n <span class="string">"server 192.168.11.2 iburst</span></span><br><span class="line"><span class="string">server 192.168.255.249 iburst</span></span><br><span class="line"><span class="string">driftfile /var/lib/chrony/drift</span></span><br><span class="line"><span class="string">makestep 1.0 3</span></span><br><span class="line"><span class="string">rtcsync</span></span><br><span class="line"><span class="string">logdir /var/log/chrony"</span> | base64 -w0)</span><br><span class="line"></span><br><span class="line">cat &gt; assets/openshift/99_master-chrony.yaml &lt;&lt;EOF</span><br><span class="line">apiVersion: machineconfiguration.openshift.io/v1</span><br><span class="line">kind: MachineConfig</span><br><span class="line">metadata:</span><br><span class="line">  labels:</span><br><span class="line">    machineconfiguration.openshift.io/role: master</span><br><span class="line">  name: 50-vopsdev-master-chrony</span><br><span class="line">spec:</span><br><span class="line">  config:</span><br><span class="line">    ignition:</span><br><span class="line">      version: 2.2.0</span><br><span class="line">    storage:</span><br><span class="line">      files:</span><br><span class="line">      - contents:</span><br><span class="line">          <span class="built_in">source</span>: data:text/plain;charset=utf-8;base64,<span class="variable">$chrony_config</span></span><br><span class="line">        filesystem: root</span><br><span class="line">        mode: 0644</span><br><span class="line">        path: /etc/chrony.conf</span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line">cat &gt; assets/openshift/99_worker-chrony.yaml &lt;&lt;EOF</span><br><span class="line">apiVersion: machineconfiguration.openshift.io/v1</span><br><span class="line">kind: MachineConfig</span><br><span class="line">metadata:</span><br><span class="line">  labels:</span><br><span class="line">    machineconfiguration.openshift.io/role: worker</span><br><span class="line">  name: 50-vopsdev-worker-chrony</span><br><span class="line">spec:</span><br><span class="line">  config:</span><br><span class="line">    ignition:</span><br><span class="line">      version: 2.2.0</span><br><span class="line">    storage:</span><br><span class="line">      files:</span><br><span class="line">      - contents:</span><br><span class="line">          <span class="built_in">source</span>: data:text/plain;charset=utf-8;base64,<span class="variable">$chrony_config</span></span><br><span class="line">        filesystem: root</span><br><span class="line">        mode: 0644</span><br><span class="line">        path: /etc/chrony.conf</span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line"><span class="comment"># 生成 ignition 配置</span></span><br><span class="line">./openshift-install create ignition-configs --dir=assets</span><br><span class="line"></span><br><span class="line"><span class="comment"># 跳板机上运行了 httpd, 提供静态文件服务</span></span><br><span class="line"><span class="comment"># 后面节点可以通过 http://static.svc.vopsdev.com/ocp/bootstrap.ign 下载</span></span><br><span class="line">sudo cp -f assets/bootstrap.ign /var/www/static/ocp/</span><br><span class="line"></span><br><span class="line">cat &gt; ./assets/append-bootstrap.ign &lt;&lt;EOF</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"ignition"</span>: &#123;</span><br><span class="line">    <span class="string">"config"</span>: &#123;</span><br><span class="line">      <span class="string">"append"</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">          <span class="string">"source"</span>: <span class="string">"http://static.svc.vopsdev.com/ocp/bootstrap.ign"</span>, </span><br><span class="line">          <span class="string">"verification"</span>: &#123;&#125;</span><br><span class="line">        &#125;</span><br><span class="line">      ]</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"timeouts"</span>: &#123;&#125;,</span><br><span class="line">    <span class="string">"version"</span>: <span class="string">"2.1.0"</span></span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="string">"networkd"</span>: &#123;&#125;,</span><br><span class="line">  <span class="string">"passwd"</span>: &#123;&#125;,</span><br><span class="line">  <span class="string">"storage"</span>: &#123;&#125;,</span><br><span class="line">  <span class="string">"systemd"</span>: &#123;&#125;</span><br><span class="line">&#125;</span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line"><span class="comment"># base64 编码的 ignition</span></span><br><span class="line">base64 -w0 assets/master.ign &gt; assets/master.64</span><br><span class="line">base64 -w0 assets/worker.ign &gt; assets/worker.64</span><br><span class="line">base64 -w0 assets/append-bootstrap.ign &gt; assets/append-bootstrap.64</span><br></pre></td></tr></table></figure>
+<h2 id="部署节点">部署节点</h2>
+<p>对于 vSphere 环境下的部署, ignition 数据需要通过 guestinfo.ignition.config.data 虚拟机属性注入, 手工操作显然不可接受. 我这里采用的方法是 ovftool + govc. 用 ansible 或者 terraform 之类也可以做, 但是在这儿显得杀鸡用牛刀了</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">BOOTSTRAP_B64_CONF=<span class="string">"<span class="variable">$(cat assets/append-bootstrap.64)</span>"</span></span><br><span class="line">MASTER_B64_CONF=<span class="string">"<span class="variable">$(cat assets/master.64)</span>"</span></span><br><span class="line">WORKER_B64_CONF=<span class="string">"<span class="variable">$(cat assets/worker.64)</span>"</span></span><br><span class="line">RHCOS_OVA=<span class="string">"/mnt/driver/RedHat/openshift-4.3/rhcos-4.3.0-x86_64-vmware.ova"</span></span><br><span class="line">USER=<span class="string">'administrator@vsphere.local'</span></span><br><span class="line">PASS=<span class="string">'xxx'</span></span><br><span class="line">VC=<span class="string">"vc.int.vopsdev.com"</span></span><br><span class="line">VMFOLDER=<span class="string">"Lab/OCP"</span></span><br><span class="line">NETWORK=<span class="string">"SG-SVC-11"</span></span><br><span class="line">DATASTORE=<span class="string">"DS-SHARED"</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># infoblox api access</span></span><br><span class="line">IBUSER=<span class="string">"xxx"</span></span><br><span class="line">IBPASS=<span class="string">"xxx"</span></span><br><span class="line">IBAPI_BASE=<span class="string">"https://infoblox.int.vopsdev.com/wapi/v2.1"</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">export</span> GOVC_URL=<span class="string">"<span class="variable">$USER</span>:<span class="variable">$PASS</span>@<span class="variable">$VC</span>"</span></span><br><span class="line"><span class="built_in">export</span> GOVC_INSECURE=<span class="literal">true</span></span><br><span class="line"><span class="built_in">export</span> GOVC_DATACENTER=HDC</span><br><span class="line"></span><br><span class="line">OCP_MASTERS=()</span><br><span class="line">OCP_WORKERS=()</span><br><span class="line"></span><br><span class="line"><span class="comment"># bootstrap node: 4 vCPU + 16G RAM</span></span><br><span class="line">VM=<span class="string">"ocp-bootstrap"</span></span><br><span class="line">ovftool --vmFolder=<span class="string">"<span class="variable">$VMFOLDER</span>"</span> --datastore=<span class="string">"<span class="variable">$DATASTORE</span>"</span> --diskMode=<span class="string">"thin"</span> --net:<span class="string">"VM Network"</span>=<span class="string">"<span class="variable">$NETWORK</span>"</span> --name=<span class="string">"<span class="variable">$VM</span>"</span>  --numberOfCpus:<span class="string">'*'</span>=4 --memorySize:<span class="string">'*'</span>=16384 --allowExtraConfig --extraConfig:disk.EnableUUID=<span class="literal">true</span> --extraConfig:guestinfo.ignition.config.data.encoding=<span class="string">"base64"</span> --extraConfig:guestinfo.ignition.config.data=<span class="string">"<span class="variable">$BOOTSTRAP_B64_CONF</span>"</span> <span class="variable">$RHCOS_OVA</span> <span class="string">"vi://<span class="variable">$USER</span>:<span class="variable">$PASS</span>@<span class="variable">$VC</span>/HDC/host/compute-cluster"</span></span><br><span class="line">govc vm.disk.change -vm <span class="variable">$VM</span> -disk.label <span class="string">"Hard disk 1"</span> -size 120G</span><br><span class="line"></span><br><span class="line"><span class="comment"># master nodes: 4 vCPU + 16G RAM</span></span><br><span class="line"><span class="keyword">for</span> idx <span class="keyword">in</span> 0 1 2; <span class="keyword">do</span></span><br><span class="line">  VM=<span class="string">"ocp-node-<span class="variable">$idx</span>"</span></span><br><span class="line">  ovftool --vmFolder=<span class="string">"<span class="variable">$VMFOLDER</span>"</span> --datastore=<span class="string">"<span class="variable">$DATASTORE</span>"</span> --diskMode=<span class="string">"thin"</span> --net:<span class="string">"VM Network"</span>=<span class="string">"<span class="variable">$NETWORK</span>"</span> --name=<span class="string">"<span class="variable">$VM</span>"</span>  --numberOfCpus:<span class="string">'*'</span>=4 --memorySize:<span class="string">'*'</span>=16384 --allowExtraConfig --extraConfig:disk.EnableUUID=<span class="literal">true</span> --prop:guestinfo.ignition.config.data.encoding=<span class="string">"base64"</span> --prop:guestinfo.ignition.config.data=<span class="string">"<span class="variable">$MASTER_B64_CONF</span>"</span> <span class="variable">$RHCOS_OVA</span> <span class="string">"vi://<span class="variable">$USER</span>:<span class="variable">$PASS</span>@<span class="variable">$VC</span>/HDC/host/compute-cluster"</span></span><br><span class="line">  govc vm.disk.change -vm <span class="variable">$VM</span> -disk.label <span class="string">"Hard disk 1"</span> -size 120G</span><br><span class="line">  OCP_MASTERS=(<span class="string">"<span class="variable">$&#123;OCP_MASTERS[@]&#125;</span>"</span> <span class="variable">$VM</span>)</span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># worker nodes: 4 vCPU + 32G RAM</span></span><br><span class="line"><span class="keyword">for</span> idx <span class="keyword">in</span> 3 4 5; <span class="keyword">do</span></span><br><span class="line">  VM=<span class="string">"ocp-node-<span class="variable">$idx</span>"</span></span><br><span class="line">  ovftool --vmFolder=<span class="string">"<span class="variable">$VMFOLDER</span>"</span> --datastore=<span class="string">"<span class="variable">$DATASTORE</span>"</span> --diskMode=<span class="string">"thin"</span> --net:<span class="string">"VM Network"</span>=<span class="string">"<span class="variable">$NETWORK</span>"</span> --name=<span class="string">"<span class="variable">$VM</span>"</span>  --numberOfCpus:<span class="string">'*'</span>=4 --memorySize:<span class="string">'*'</span>=32768 --allowExtraConfig --extraConfig:disk.EnableUUID=<span class="literal">true</span> --prop:guestinfo.ignition.config.data.encoding=<span class="string">"base64"</span> --prop:guestinfo.ignition.config.data=<span class="string">"<span class="variable">$WORKER_B64_CONF</span>"</span> <span class="variable">$RHCOS_OVA</span> <span class="string">"vi://<span class="variable">$USER</span>:<span class="variable">$PASS</span>@<span class="variable">$VC</span>/HDC/host/compute-cluster"</span></span><br><span class="line">  govc vm.disk.change -vm <span class="variable">$VM</span> -disk.label <span class="string">"Hard disk 1"</span> -size 120G</span><br><span class="line">  OCP_WORKERS=(<span class="string">"<span class="variable">$&#123;OCP_WORKERS[@]&#125;</span>"</span> <span class="variable">$VM</span>)</span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 根据新的 mac 地址, 更新 dhcp fixed address 记录</span></span><br><span class="line">ALL_NODES=(ocp-bootstrap <span class="string">"<span class="variable">$&#123;OCP_MASTERS[@]&#125;</span>"</span> <span class="string">"<span class="variable">$&#123;OCP_WORKERS[@]&#125;</span>"</span>)</span><br><span class="line"><span class="keyword">for</span> node <span class="keyword">in</span> <span class="string">"<span class="variable">$&#123;ALL_NODES[@]&#125;</span>"</span>; <span class="keyword">do</span></span><br><span class="line">  mac=$(govc device.info -vm <span class="variable">$node</span> -json ethernet-0 | jq -r .Devices[].MacAddress)</span><br><span class="line">  ip=$(host <span class="variable">$node</span> | cut -d<span class="string">' '</span> -f4)</span><br><span class="line">  <span class="built_in">echo</span> <span class="string">"<span class="variable">$node</span>: <span class="variable">$ip</span>, <span class="variable">$mac</span>"</span></span><br><span class="line">  api_path=$(curl -s -k -u <span class="variable">$IBUSER</span>:<span class="variable">$IBPASS</span> -H <span class="string">"Content-Type: application/json"</span> -X GET <span class="string">"<span class="variable">$IBAPI_BASE</span>/fixedaddress?ipv4addr=<span class="variable">$ip</span>"</span> | jq -r <span class="string">'.[] | ._ref'</span>)  </span><br><span class="line">  curl -s -k -u <span class="variable">$IBUSER</span>:<span class="variable">$IBPASS</span> -H <span class="string">"Content-Type: application/json"</span> -X PUT  <span class="string">"<span class="variable">$IBAPI_BASE</span>/<span class="variable">$&#123;api_path&#125;</span>"</span> -d <span class="string">"&#123;\"mac\":\"<span class="variable">$mac</span>\"&#125;"</span> &gt; /dev/null</span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 必要时 reload infoblox DHCP 服务</span></span><br><span class="line">grid_path=$(curl -s -k -u <span class="variable">$IBUSER</span>:<span class="variable">$IBPASS</span> -H <span class="string">"Content-Type: application/json"</span> <span class="string">"<span class="variable">$IBAPI_BASE</span>/grid"</span> | jq -r <span class="string">'.[] | ._ref'</span>)</span><br><span class="line">curl -s -k -u <span class="variable">$IBUSER</span>:<span class="variable">$IBPASS</span> -H <span class="string">"Content-Type: application/json"</span> -X POST <span class="string">"<span class="variable">$IBAPI_BASE</span>/<span class="variable">$&#123;grid_path&#125;</span>?_function=restartservices"</span> -d <span class="string">'&#123;"member_order":"SIMULTANEOUSLY","restart_option":"RESTART_IF_NEEDED","service_option":"DHCP"&#125;'</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 启动 bootstrap</span></span><br><span class="line">govc vm.power -on <span class="string">"ocp-bootstrap"</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 观察负载均衡器, 下面两个没问题了再进行下去</span></span><br><span class="line"><span class="comment"># curl -v -k https://api-int.ocp.vopsdev.com:22623/config/master</span></span><br><span class="line"><span class="comment"># curl -v -k https://api-int.ocp.vopsdev.com:22623/config/worker </span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 启动所有 master 节点. 节点会去 bootstrap 上下载配置</span></span><br><span class="line"><span class="keyword">for</span> node <span class="keyword">in</span> <span class="string">"<span class="variable">$&#123;OCP_MASTERS[@]&#125;</span>"</span>; <span class="keyword">do</span></span><br><span class="line">  govc vm.power -on <span class="variable">$node</span></span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 观察负载均衡器, 3 个 master 都起来了再进行下去</span></span><br><span class="line"><span class="comment"># curl -v -k https://api-int.ocp.vopsdev.com:22623/config/master</span></span><br><span class="line"><span class="comment"># curl -v -k https://api-int.ocp.vopsdev.com:22623/config/worker </span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 启动所有 worker 节点. 节点会去 master 上下载配置</span></span><br><span class="line"><span class="keyword">for</span> node <span class="keyword">in</span> <span class="string">"<span class="variable">$&#123;OCP_WORKERS[@]&#125;</span>"</span>; <span class="keyword">do</span></span><br><span class="line">  govc vm.power -on <span class="variable">$node</span></span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 到这儿这步一般已经结束了</span></span><br><span class="line">./openshift-install --dir=assets <span class="built_in">wait</span>-for bootstrap-complete --<span class="built_in">log</span>-level=debug</span><br><span class="line"></span><br><span class="line"><span class="built_in">export</span> KUBECONFIG=<span class="string">'./assets/auth/kubeconfig'</span></span><br><span class="line">oc whoami</span><br><span class="line">oc version</span><br><span class="line"></span><br><span class="line"><span class="comment"># 如果有 pending 的证书请求就批准</span></span><br><span class="line">oc get csr</span><br><span class="line">oc get csr -o json | jq -r <span class="string">'.items[] | select(.status == &#123;&#125; ) | .metadata.name'</span> | xargs oc adm certificate approve</span><br><span class="line"></span><br><span class="line"><span class="comment"># 等待 worker 节点起来, 确保所有节点都是 Ready</span></span><br><span class="line">oc get nodes</span><br><span class="line"></span><br><span class="line"><span class="comment"># 等所有 cluster operator 状态 AVAILABLE: TRUE</span></span><br><span class="line">oc get clusteroperators</span><br><span class="line"></span><br><span class="line"><span class="comment"># 等待安装结束, 获取集群管理员密码</span></span><br><span class="line">./openshift-install --dir=assets <span class="built_in">wait</span>-for install-complete</span><br></pre></td></tr></table></figure>
+<p>使用集群管理员 kubeadmin 登录 web console <img src="ocp-console-initial.png"></p>
+<p>至此集群初步搭建完成, 后面将针对各个基础服务进行完善.</p>
+]]></content>
+      <categories>
+        <category>RedHat</category>
+        <category>Openshift</category>
+      </categories>
+      <tags>
+        <tag>RedHat</tag>
+        <tag>Openshift</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>实施 AWS Landing Zone 4: 定制 Landing Zone CodePipeline</title>
     <url>/2020-03-16/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-4-%E5%AE%9A%E5%88%B6-Landing-Zone-CodePipeline/</url>
     <content><![CDATA[<p>Landing Zone CodePipeline 默认使用一个启用了版本的 S3 bucket 作为代码来源: 当有新的配置文件 aws-landing-zone-configuration.zip 上传时, 触发 CodePipeline. 然而使用 versioned bucket 作为版本控制显然算不上最佳实践. 这里将修改 Landing Zone Codepipeline 使用 CodeCommit repo 作为代码来源. 这样就可以通过 git 来管理组织下所有 AWS 账号的配置基线.</p>
