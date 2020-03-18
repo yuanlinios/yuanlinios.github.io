@@ -133,10 +133,10 @@
 <p>一些注释</p>
 <ul>
 <li>metadata.name + baseDomain 组成集群的基础域名, 这里是 ocp.vopsdev.com</li>
-<li>需要在 vSphere Datacenter 下按照 metadata.name 建立一个虚拟机目录, 将来创建 vSphere 动态卷需要, 具体原因看<a href="https://github.com/vmware-arhive/kubernetes/issues/499" target="_blank" rel="external nofollow noopener noreferrer">这里</a>. 然而你并不需要将 OCP 节点放到这个虚拟机目录下</li>
+<li>需要在 vSphere Datacenter 下按照 metadata.name 建立一个虚拟机目录, 将来创建 vSphere 动态卷需要, 具体原因看<a href="https://github.com/vmware-archive/kubernetes/issues/499" target="_blank" rel="external nofollow noopener noreferrer">这里</a>. 然而你并不需要将 OCP 节点放到这个虚拟机目录下</li>
 <li>platform 下的 vcenter 信息主要用于动态卷的创建, 确保这个用户有足够的权限, 具体看<a href="https://vmware.github.io/vsphere-storage-for-kubernetes/documentation/vcp-roles.html" target="_blank" rel="external nofollow noopener noreferrer">这里</a></li>
 <li>我的环境有私有 PKI, 所有的服务器证书由二级 CA 签发, 因此把根 CA 的证书放到 additionalTrustBundle 里</li>
-<li>imageContentSources 来自<code>oc adm release mirror</code> 的输出结果</li>
+<li>imageContentSources 来自前面<code>oc adm release mirror</code> 的输出结果</li>
 <li>我的 quay 私有镜像库不允许匿名拉取, 因此提供了 pullSecret</li>
 </ul>
 <h3 id="生成-ignition">生成 ignition</h3>
