@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://notes.yuanlinios.me/"/>
-  <updated>2020-03-19T02:05:15.437Z</updated>
+  <updated>2020-03-19T03:50:32.535Z</updated>
   <id>https://notes.yuanlinios.me/</id>
   
   <author>
@@ -15,6 +15,33 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>离线部署 Openshift Container Platform 4.3 - 3: 配置本地 ImageStream 和 OperatorHub</title>
+    <link href="https://notes.yuanlinios.me/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/"/>
+    <id>https://notes.yuanlinios.me/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/</id>
+    <published>2020-03-18T14:20:23.000Z</published>
+    <updated>2020-03-19T03:50:32.535Z</updated>
+    
+    <content type="html"><![CDATA[<p>本文将使用前面保存私有镜像库的离线资源替换默认的 ImageStream 和 OperatorHub</p><a id="more"></a><h2 id="替换-sample-images">替换 Sample Images</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 私有镜像库使用私有 PKI 签发的证书提供 https 服务, 需要让 samples operator 信任根 CA</span></span><br><span class="line">oc create configmap registry-config --from-file=/etc/pki/ca-trust/<span class="built_in">source</span>/anchors/vopsdev-root-ca-g1.crt -n openshift-config</span><br><span class="line">oc patch image.config.openshift.io cluster --patch <span class="string">'&#123;"spec":&#123;"additionalTrustedCA":&#123;"name":"registry-config"&#125;&#125;&#125;'</span> --<span class="built_in">type</span>=merge</span><br><span class="line"></span><br><span class="line"><span class="comment"># 添加私有镜像库地址</span></span><br><span class="line">oc patch configs.samples.operator.openshift.io cluster --patch <span class="string">'&#123;"spec":&#123;"samplesRegistry":"quay.svc.vopsdev.com"&#125;&#125;'</span> --<span class="built_in">type</span>=merge</span><br><span class="line"></span><br><span class="line"><span class="comment"># 清除现有的 imagestreams</span></span><br><span class="line">oc patch configs.samples.operator.openshift.io cluster --patch <span class="string">'[&#123;"op": "replace", "path": "/spec/managementState", "value":"Removed"&#125;]'</span> --<span class="built_in">type</span>=json</span><br><span class="line">oc get is -n openshift</span><br><span class="line"></span><br><span class="line"><span class="comment"># 再重新创建出来</span></span><br><span class="line">oc patch configs.samples.operator.openshift.io cluster --patch <span class="string">'[&#123;"op": "replace", "path": "/spec/managementState", "value":"Managed"&#125;]'</span> --<span class="built_in">type</span>=json</span><br><span class="line">oc get is -n openshift</span><br><span class="line"></span><br><span class="line"><span class="comment"># 检查 dockerImageReference 可以发现已经指向私有镜像库了  </span></span><br><span class="line">oc get is apicast-gateway -n openshift -o yaml</span><br></pre></td></tr></table></figure><p>在 openshift namespace 下的这几个 imagestream 不受 samples operator 管理, 而是来自离线安装介质</p><ul><li>cli</li><li>cli-artifacts</li><li>installer</li><li>installer-artifacts</li><li>must-gather</li><li>tests</li><li>jenkins</li><li>jenkins-agent-maven</li><li>jenkins-agent-nodejs</li></ul><h2 id="替换-operatorhub">替换 OperatorHub</h2><p>通过 <code>oc get catalogsource -n openshift-marketplace</code> 可以发现在 openshift-marketplace namespace 下有 redhat-operators, community-operators 和 certified-operators 三个 catalog source. 先禁用这些默认的源, 然后再添加本地离线资源</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">oc patch OperatorHub cluster --<span class="built_in">type</span> json -p <span class="string">'[&#123;"op": "add", "path": "/spec/disableAllDefaultSources", "value": true&#125;]'</span></span><br></pre></td></tr></table></figure><p>此时在 web console 上查看 operatorHub 时可以发现已经没有内容了.</p><p><img src="ocp-operatorhub-empty.png"></p><p>通过 <code>oc get catalogsource -n openshift-marketplace</code> 查看显示内容为空.</p><div class="note info">            <p>此处发现各个节点 kubelet 会依次重启. 如果遇到这个情况, 等各个节点都 Ready 再进行后面的操作</p>          </div><p>然后添加本地 catalog source. 这里需要用到前面 <code>oc adm catalog mirror</code> 产生的目录 redhat-operators-manifests</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 创建 imageContentSourcePolicy</span></span><br><span class="line">oc apply -f redhat-operators-manifests/</span><br><span class="line"></span><br><span class="line"><span class="comment"># 创建 catalogSource 引用离线资源</span></span><br><span class="line">oc apply -f - &lt;&lt;EOF</span><br><span class="line">apiVersion: operators.coreos.com/v1alpha1</span><br><span class="line">kind: CatalogSource</span><br><span class="line">metadata:</span><br><span class="line">  name: vopsdev-redhat-operators</span><br><span class="line">  namespace: openshift-marketplace</span><br><span class="line">spec:</span><br><span class="line">  sourceType: grpc</span><br><span class="line">  image: quay.svc.vopsdev.com/devinfra/redhat-operators:v1</span><br><span class="line">  displayName: VOPSDEV RedHat Operator Catalog</span><br><span class="line">  publisher: grpc</span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line"><span class="comment"># 会看到自定义的 catalog pod 和 catalog source</span></span><br><span class="line">oc get pods -n openshift-marketplace</span><br><span class="line">oc get catalogsource -n openshift-marketplace</span><br></pre></td></tr></table></figure><p>再登录 web console 就可以看到 OperatorHub 下的内容了</p><p><img src="ocp-operatorhub-customized.png"></p>]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;本文将使用前面保存私有镜像库的离线资源替换默认的 ImageStream 和 OperatorHub&lt;/p&gt;
+    
+    </summary>
+    
+    
+      <category term="RedHat" scheme="https://notes.yuanlinios.me/categories/RedHat/"/>
+    
+      <category term="Openshift" scheme="https://notes.yuanlinios.me/categories/RedHat/Openshift/"/>
+    
+    
+      <category term="RedHat" scheme="https://notes.yuanlinios.me/tags/RedHat/"/>
+    
+      <category term="Openshift" scheme="https://notes.yuanlinios.me/tags/Openshift/"/>
+    
+  </entry>
   
   <entry>
     <title>离线部署 Openshift Container Platform 4.3 - 2: 初始安装</title>

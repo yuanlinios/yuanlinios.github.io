@@ -20,25 +20,27 @@
     var CONFIG = {"hostname":"notes.yuanlinios.me","root":"/","scheme":"Mist","version":"7.7.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"disqus","storage":true,"lazyload":false,"nav":{"disqus":{"text":"Load Disqus","order":-1}},"activeClass":"disqus"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="本文介绍了 AWS 多账号管理的需求, Landing Zone 方案的背景及基本结构, Landing Zone 方案和 Control Tower 的对比与选择">
+  <meta name="description" content="本文将使用前面保存私有镜像库的离线资源替换默认的 ImageStream 和 OperatorHub">
 <meta property="og:type" content="article">
-<meta property="og:title" content="实施 AWS Landing Zone 1: 背景及架构介绍">
-<meta property="og:url" content="https://notes.yuanlinios.me/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/index.html">
+<meta property="og:title" content="离线部署 Openshift Container Platform 4.3 - 3: 配置本地 ImageStream 和 OperatorHub">
+<meta property="og:url" content="https://notes.yuanlinios.me/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/index.html">
 <meta property="og:site_name" content="Lin&#39;s Notes">
-<meta property="og:description" content="本文介绍了 AWS 多账号管理的需求, Landing Zone 方案的背景及基本结构, Landing Zone 方案和 Control Tower 的对比与选择">
+<meta property="og:description" content="本文将使用前面保存私有镜像库的离线资源替换默认的 ImageStream 和 OperatorHub">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://notes.yuanlinios.me/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/aws-landing-zone-architecture.png">
-<meta property="article:published_time" content="2020-03-08T14:37:50.000Z">
-<meta property="article:modified_time" content="2020-03-09T06:26:41.099Z">
+<meta property="og:image" content="https://notes.yuanlinios.me/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/ocp-operatorhub-empty.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/ocp-operatorhub-customized.png">
+<meta property="article:published_time" content="2020-03-18T14:20:23.000Z">
+<meta property="article:modified_time" content="2020-03-19T03:50:32.535Z">
 <meta property="article:author" content="L. Yuan">
-<meta property="article:tag" content="AWS">
-<meta property="article:tag" content=" Landing Zone">
-<meta property="article:tag" content=" Organization">
-<meta property="article:tag" content=" Control Tower">
+<meta property="article:tag" content="Openshift">
+<meta property="article:tag" content=" disconnected">
+<meta property="article:tag" content=" deployment">
+<meta property="article:tag" content=" ImageStream">
+<meta property="article:tag" content=" OperatorHub">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://notes.yuanlinios.me/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/aws-landing-zone-architecture.png">
+<meta name="twitter:image" content="https://notes.yuanlinios.me/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/ocp-operatorhub-empty.png">
 
-<link rel="canonical" href="https://notes.yuanlinios.me/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/">
+<link rel="canonical" href="https://notes.yuanlinios.me/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/">
 
 
 <script id="page-configurations">
@@ -50,7 +52,7 @@
   };
 </script>
 
-  <title>实施 AWS Landing Zone 1: 背景及架构介绍 | Lin's Notes</title>
+  <title>离线部署 Openshift Container Platform 4.3 - 3: 配置本地 ImageStream 和 OperatorHub | Lin's Notes</title>
   
 
 
@@ -206,7 +208,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/">
+    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -219,7 +221,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          实施 AWS Landing Zone 1: 背景及架构介绍
+          离线部署 Openshift Container Platform 4.3 - 3: 配置本地 ImageStream 和 OperatorHub
         </h2>
 
         <div class="post-meta">
@@ -229,14 +231,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-03-08 22:37:50" itemprop="dateCreated datePublished" datetime="2020-03-08T22:37:50+08:00">2020-03-08</time>
+              <time title="创建时间：2020-03-18 22:20:23" itemprop="dateCreated datePublished" datetime="2020-03-18T22:20:23+08:00">2020-03-18</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-03-09 14:26:41" itemprop="dateModified" datetime="2020-03-09T14:26:41+08:00">2020-03-09</time>
+                <time title="修改时间：2020-03-19 11:50:32" itemprop="dateModified" datetime="2020-03-19T11:50:32+08:00">2020-03-19</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -244,11 +246,11 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/AWS/" itemprop="url" rel="index"><span itemprop="name">AWS</span></a>
+                  <a href="/categories/RedHat/" itemprop="url" rel="index"><span itemprop="name">RedHat</span></a>
                 </span>
                   ，
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/AWS/Landing-Zone/" itemprop="url" rel="index"><span itemprop="name">Landing Zone</span></a>
+                  <a href="/categories/RedHat/Openshift/" itemprop="url" rel="index"><span itemprop="name">Openshift</span></a>
                 </span>
             </span>
 
@@ -268,8 +270,8 @@
       </span>
       <span class="post-meta-item-text">Disqus：</span>
     
-    <a title="disqus" href="/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/#disqus_thread" itemprop="discussionUrl">
-      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020-03-08/实施-AWS-Landing-Zone-1-背景及架构介绍/" itemprop="commentCount"></span>
+    <a title="disqus" href="/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020-03-18/离线部署-Openshift-Container-Platform-4-3-3-配置本地-ImageStream-和-OperatorHub/" itemprop="commentCount"></span>
     </a>
   </span>
   
@@ -279,7 +281,7 @@
                 <i class="fa fa-file-word-o"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>1.8k</span>
+              <span>2.2k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
@@ -298,47 +300,35 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p>本文介绍了 AWS 多账号管理的需求, Landing Zone 方案的背景及基本结构, Landing Zone 方案和 Control Tower 的对比与选择</p>
+        <p>本文将使用前面保存私有镜像库的离线资源替换默认的 ImageStream 和 OperatorHub</p>
 <a id="more"></a>
-<h2 id="多账户的需求和面临的挑战">多账户的需求和面临的挑战</h2>
-<p>随着越来越多的工作负载迁移到 AWS 公有云, 过去的单个账户逐渐无法满足复杂环境的需要: 难以清晰界定的职责边界, 资源无法有效隔离, 对不同部门团队的计费和审计等. 此时会自然而然的引入多账户策略: 不同部门/团队, 不同环境使用不同的 AWS 账号. 优点很明显</p>
+<h2 id="替换-sample-images">替换 Sample Images</h2>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 私有镜像库使用私有 PKI 签发的证书提供 https 服务, 需要让 samples operator 信任根 CA</span></span><br><span class="line">oc create configmap registry-config --from-file=/etc/pki/ca-trust/<span class="built_in">source</span>/anchors/vopsdev-root-ca-g1.crt -n openshift-config</span><br><span class="line">oc patch image.config.openshift.io cluster --patch <span class="string">'&#123;"spec":&#123;"additionalTrustedCA":&#123;"name":"registry-config"&#125;&#125;&#125;'</span> --<span class="built_in">type</span>=merge</span><br><span class="line"></span><br><span class="line"><span class="comment"># 添加私有镜像库地址</span></span><br><span class="line">oc patch configs.samples.operator.openshift.io cluster --patch <span class="string">'&#123;"spec":&#123;"samplesRegistry":"quay.svc.vopsdev.com"&#125;&#125;'</span> --<span class="built_in">type</span>=merge</span><br><span class="line"></span><br><span class="line"><span class="comment"># 清除现有的 imagestreams</span></span><br><span class="line">oc patch configs.samples.operator.openshift.io cluster --patch <span class="string">'[&#123;"op": "replace", "path": "/spec/managementState", "value":"Removed"&#125;]'</span> --<span class="built_in">type</span>=json</span><br><span class="line">oc get is -n openshift</span><br><span class="line"></span><br><span class="line"><span class="comment"># 再重新创建出来</span></span><br><span class="line">oc patch configs.samples.operator.openshift.io cluster --patch <span class="string">'[&#123;"op": "replace", "path": "/spec/managementState", "value":"Managed"&#125;]'</span> --<span class="built_in">type</span>=json</span><br><span class="line">oc get is -n openshift</span><br><span class="line"></span><br><span class="line"><span class="comment"># 检查 dockerImageReference 可以发现已经指向私有镜像库了  </span></span><br><span class="line">oc get is apicast-gateway -n openshift -o yaml</span><br></pre></td></tr></table></figure>
+<p>在 openshift namespace 下的这几个 imagestream 不受 samples operator 管理, 而是来自离线安装介质</p>
 <ul>
-<li>降低触及单个账户资源上限的风险</li>
-<li>不同团队的职责分离</li>
-<li>开发/测试/生产环境的资源隔离</li>
-<li>减少人为故障的影响范围</li>
+<li>cli</li>
+<li>cli-artifacts</li>
+<li>installer</li>
+<li>installer-artifacts</li>
+<li>must-gather</li>
+<li>tests</li>
+<li>jenkins</li>
+<li>jenkins-agent-maven</li>
+<li>jenkins-agent-nodejs</li>
 </ul>
-<p>AWS Organization 提供了多账户环境的基础. 然而创建账户, 加入组织并完成初始化基线配置是一项繁琐的工作. 如何确保各个账户的合规性和配置的一致性? 如果后期配置基线发生变更, 又如何将基线变更追溯的应用到所有的现存账户上? Landing Zone 方案旨在解决这些问题.</p>
-<h2 id="landing-zone-简介">Landing Zone 简介</h2>
-<p>Landing Zone 是 AWS 在 2018 年推出的一套解决方案 (注意: 并不是一个 AWS 原生服务), 用来帮助用户根据 AWS 最佳实践, 快速建立安全的多账户环境</p>
-<p><img src="aws-landing-zone-architecture.png"></p>
-<p>上图为 Landing Zone 的基本结构:</p>
-<ul>
-<li>核心账户: master, shared services, log archive, security
-<ul>
-<li>Master: 也称为 Organization account. 是创建 AWS Organization, Landing Zone 基础组件 (Service Catalog, CodePipeline, State Machines) 的地方</li>
-<li>Shared Services: 公共服务所在的账号</li>
-<li>Log Archive: 存放所有账户 Cloudtrail 和 Config log的 S3 bucket 所在的账户</li>
-<li>Security: Guarduty master 所在账户, 全局 admin/readonly 角色所在账户</li>
-</ul></li>
-<li>Accounting Vending Machine (AVM): 是 Landing Zone 在 Service Catalog 里创建的一个产品, 通过运行 AVM 来创建新账户并应用配置基线</li>
-<li>Landing Zone Codepipline: 配置变更流水线. 触发该流水线来更改核心账户资源, Service Control Policies 和基线资源等. 该流水线最终会调用 AVM 将基线资源变更应用到所有账户上</li>
-</ul>
-<p>各个组件/服务更深入的介绍将在后续的系列文章中给出.</p>
-<h2 id="control-tower-还是-landing-zone">Control Tower 还是 Landing Zone?</h2>
-<p>Landing Zone方案涉及多种AWS服务, 其部署较为复杂, 因此在 2019 年 AWS 推出了 Control Tower 服务, 旨在帮助用户通过最简单的方式设置<strong>全新</strong>的多账户 AWS 环境. 其背后依然是 Landing Zone, 但是隐藏了实现细节和基础服务.</p>
-<p>用户在实际生产环境下该如何选择?</p>
-<ul>
-<li>Control Tower 只适用于全新部署 (greenfield). 如果你已经建立了多账户的环境 (Organization, SSO), 又不想迁移账户, 此时应该选择 Landing Zone</li>
-<li>Landing Zone 具有更强的定制化 (当然这也正是它更加复杂的原因), 所有的基线资源都通过 Cloudformation template 创建, 用户可以方便的修改预设基线资源或者添加自定义资源</li>
-<li>Landing Zone提供了 CI/CD 流水线, 用户可以将其配置保存在代码仓库中以实现版本控制</li>
-</ul>
-<h2 id="在现存多账户环境下实施-landing-zone">在现存多账户环境下实施 Landing Zone</h2>
-<p>由于实际环境的复杂性, Landing Zone 方案在实施 AWS 最佳实践的同时, 不可避免的会对用户的环境做一些假设, 因此其部署的某些服务或者服务的设置对特定的用户可能并不适用. 此时需要对其预设配置进行调整.</p>
-<p>举个例子, 默认 Landing Zone 会在所有账号和共享服务账号 (shared services account) 之间做 VPC peering 以便所有账户可以访问共享服务账号中的公共服务. 然而 VPC peering 本身有诸多限制, 企业环境下可能更多会选择 transit VPC 架构或者使用 transit gateway. 此时用户需要修改 Landing Zone 配置模板以匹配自身环境. 在系列的后续文章中我将逐一列示.</p>
-<div class="note warning">
-            <p>AWS 声明 Landing Zone 必须由客户的 AWS account 团队或者经过认证的合作伙伴来部署, 以确保方案的实施成功. 如果你想自己实施, 请自行评估风险</p>
+<h2 id="替换-operatorhub">替换 OperatorHub</h2>
+<p>通过 <code>oc get catalogsource -n openshift-marketplace</code> 可以发现在 openshift-marketplace namespace 下有 redhat-operators, community-operators 和 certified-operators 三个 catalog source. 先禁用这些默认的源, 然后再添加本地离线资源</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">oc patch OperatorHub cluster --<span class="built_in">type</span> json -p <span class="string">'[&#123;"op": "add", "path": "/spec/disableAllDefaultSources", "value": true&#125;]'</span></span><br></pre></td></tr></table></figure>
+<p>此时在 web console 上查看 operatorHub 时可以发现已经没有内容了.</p>
+<p><img src="ocp-operatorhub-empty.png"></p>
+<p>通过 <code>oc get catalogsource -n openshift-marketplace</code> 查看显示内容为空.</p>
+<div class="note info">
+            <p>此处发现各个节点 kubelet 会依次重启. 如果遇到这个情况, 等各个节点都 Ready 再进行后面的操作</p>
           </div>
+<p>然后添加本地 catalog source. 这里需要用到前面 <code>oc adm catalog mirror</code> 产生的目录 redhat-operators-manifests</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 创建 imageContentSourcePolicy</span></span><br><span class="line">oc apply -f redhat-operators-manifests/</span><br><span class="line"></span><br><span class="line"><span class="comment"># 创建 catalogSource 引用离线资源</span></span><br><span class="line">oc apply -f - &lt;&lt;EOF</span><br><span class="line">apiVersion: operators.coreos.com/v1alpha1</span><br><span class="line">kind: CatalogSource</span><br><span class="line">metadata:</span><br><span class="line">  name: vopsdev-redhat-operators</span><br><span class="line">  namespace: openshift-marketplace</span><br><span class="line">spec:</span><br><span class="line">  sourceType: grpc</span><br><span class="line">  image: quay.svc.vopsdev.com/devinfra/redhat-operators:v1</span><br><span class="line">  displayName: VOPSDEV RedHat Operator Catalog</span><br><span class="line">  publisher: grpc</span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line"><span class="comment"># 会看到自定义的 catalog pod 和 catalog source</span></span><br><span class="line">oc get pods -n openshift-marketplace</span><br><span class="line">oc get catalogsource -n openshift-marketplace</span><br></pre></td></tr></table></figure>
+<p>再登录 web console 就可以看到 OperatorHub 下的内容了</p>
+<p><img src="ocp-operatorhub-customized.png"></p>
 
     </div>
 
@@ -354,7 +344,7 @@
   </li>
   <li class="post-copyright-link">
     <strong>本文链接：</strong>
-    <a href="https://notes.yuanlinios.me/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/" title="实施 AWS Landing Zone 1: 背景及架构介绍">https://notes.yuanlinios.me/2020-03-08/实施-AWS-Landing-Zone-1-背景及架构介绍/</a>
+    <a href="https://notes.yuanlinios.me/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/" title="离线部署 Openshift Container Platform 4.3 - 3: 配置本地 ImageStream 和 OperatorHub">https://notes.yuanlinios.me/2020-03-18/离线部署-Openshift-Container-Platform-4-3-3-配置本地-ImageStream-和-OperatorHub/</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="external nofollow noopener noreferrer" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -365,8 +355,8 @@
 
       <footer class="post-footer">
           <div class="post-tags">
-              <a href="/tags/AWS/" rel="tag"># AWS</a>
-              <a href="/tags/Landing-Zone/" rel="tag"># Landing Zone</a>
+              <a href="/tags/RedHat/" rel="tag"># RedHat</a>
+              <a href="/tags/Openshift/" rel="tag"># Openshift</a>
           </div>
 
         
@@ -374,11 +364,11 @@
 
         
     <div class="post-nav">
-      <div class="post-nav-item"></div>
       <div class="post-nav-item">
-    <a href="/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-2-%E5%AE%9E%E6%96%BD%E5%89%8D%E5%9C%BA%E6%99%AF%E4%B8%8E%E7%9B%AE%E6%A0%87%E8%A7%84%E5%88%92/" rel="next" title="实施 AWS Landing Zone 2: 实施前场景与目标规划">
-      实施 AWS Landing Zone 2: 实施前场景与目标规划 <i class="fa fa-chevron-right"></i>
+    <a href="/2020-03-16/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-2-%E5%88%9D%E5%A7%8B%E5%AE%89%E8%A3%85/" rel="prev" title="离线部署 Openshift Container Platform 4.3 - 2: 初始安装">
+      <i class="fa fa-chevron-left"></i> 离线部署 Openshift Container Platform 4.3 - 2: 初始安装
     </a></div>
+      <div class="post-nav-item"></div>
     </div>
       </footer>
     
@@ -445,7 +435,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#多账户的需求和面临的挑战"><span class="nav-number">1.</span> <span class="nav-text">多账户的需求和面临的挑战</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#landing-zone-简介"><span class="nav-number">2.</span> <span class="nav-text">Landing Zone 简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#control-tower-还是-landing-zone"><span class="nav-number">3.</span> <span class="nav-text">Control Tower 还是 Landing Zone?</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#在现存多账户环境下实施-landing-zone"><span class="nav-number">4.</span> <span class="nav-text">在现存多账户环境下实施 Landing Zone</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#替换-sample-images"><span class="nav-number">1.</span> <span class="nav-text">替换 Sample Images</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#替换-operatorhub"><span class="nav-number">2.</span> <span class="nav-text">替换 OperatorHub</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -615,9 +605,9 @@
 </script>
 <script>
   var disqus_config = function() {
-    this.page.url = "https://notes.yuanlinios.me/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/";
-    this.page.identifier = "2020-03-08/实施-AWS-Landing-Zone-1-背景及架构介绍/";
-    this.page.title = "实施 AWS Landing Zone 1: 背景及架构介绍";
+    this.page.url = "https://notes.yuanlinios.me/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/";
+    this.page.identifier = "2020-03-18/离线部署-Openshift-Container-Platform-4-3-3-配置本地-ImageStream-和-OperatorHub/";
+    this.page.title = "离线部署 Openshift Container Platform 4.3 - 3: 配置本地 ImageStream 和 OperatorHub";
     };
   NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
     if (window.DISQUS) {
