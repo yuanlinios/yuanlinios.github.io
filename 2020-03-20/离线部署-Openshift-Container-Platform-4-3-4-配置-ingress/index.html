@@ -20,23 +20,26 @@
     var CONFIG = {"hostname":"notes.yuanlinios.me","root":"/","scheme":"Mist","version":"7.7.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"disqus","storage":true,"lazyload":false,"nav":{"disqus":{"text":"Load Disqus","order":-1}},"activeClass":"disqus"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="本文将介绍 Landing Zone Initiation Stack 的部署, 参数解析以及一些容易出错的地方">
+  <meta name="description" content="本文简单配置一下 ingress router, 解决默认的设置的一些问题  固定 router pod 的放置节点: 默认没有 placement 规则, ingress router pod 可以跑在任意 worker 节点上, 给外部负载均衡器的配置带来麻烦 替换默认证书为私有 CA 签发证书, 避免内网访问时提示证书不受信任的警告">
 <meta property="og:type" content="article">
-<meta property="og:title" content="实施 AWS Landing Zone 3: 部署 Initiation Stack">
-<meta property="og:url" content="https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/index.html">
+<meta property="og:title" content="离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress">
+<meta property="og:url" content="https://notes.yuanlinios.me/2020-03-20/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/index.html">
 <meta property="og:site_name" content="Lin&#39;s Notes">
-<meta property="og:description" content="本文将介绍 Landing Zone Initiation Stack 的部署, 参数解析以及一些容易出错的地方">
+<meta property="og:description" content="本文简单配置一下 ingress router, 解决默认的设置的一些问题  固定 router pod 的放置节点: 默认没有 placement 规则, ingress router pod 可以跑在任意 worker 节点上, 给外部负载均衡器的配置带来麻烦 替换默认证书为私有 CA 签发证书, 避免内网访问时提示证书不受信任的警告">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/create-initiation-stack.png">
-<meta property="article:published_time" content="2020-03-12T16:42:14.000Z">
-<meta property="article:modified_time" content="2020-03-16T11:17:03.890Z">
+<meta property="og:image" content="https://notes.yuanlinios.me/2020-03-20/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/ingress-default-certificate.png">
+<meta property="article:published_time" content="2020-03-20T15:47:10.429Z">
+<meta property="article:modified_time" content="2020-03-20T15:47:10.428Z">
 <meta property="article:author" content="L. Yuan">
-<meta property="article:tag" content="AWS">
-<meta property="article:tag" content=" Landing Zone">
+<meta property="article:tag" content="Openshift">
+<meta property="article:tag" content=" disconnected">
+<meta property="article:tag" content=" ingress">
+<meta property="article:tag" content=" router">
+<meta property="article:tag" content=" certificate">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/create-initiation-stack.png">
+<meta name="twitter:image" content="https://notes.yuanlinios.me/2020-03-20/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/ingress-default-certificate.png">
 
-<link rel="canonical" href="https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/">
+<link rel="canonical" href="https://notes.yuanlinios.me/2020-03-20/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/">
 
 
 <script id="page-configurations">
@@ -48,7 +51,7 @@
   };
 </script>
 
-  <title>实施 AWS Landing Zone 3: 部署 Initiation Stack | Lin's Notes</title>
+  <title>离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress | Lin's Notes</title>
   
 
 
@@ -204,7 +207,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/">
+    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/2020-03-20/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -217,7 +220,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          实施 AWS Landing Zone 3: 部署 Initiation Stack
+          离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress
         </h2>
 
         <div class="post-meta">
@@ -227,26 +230,19 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-03-13 00:42:14" itemprop="dateCreated datePublished" datetime="2020-03-13T00:42:14+08:00">2020-03-13</time>
+              <time title="创建时间：2020-03-20 23:47:10" itemprop="dateCreated datePublished" datetime="2020-03-20T23:47:10+08:00">2020-03-20</time>
             </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-03-16 19:17:03" itemprop="dateModified" datetime="2020-03-16T19:17:03+08:00">2020-03-16</time>
-              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="fa fa-folder-o"></i>
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/AWS/" itemprop="url" rel="index"><span itemprop="name">AWS</span></a>
+                  <a href="/categories/RedHat/" itemprop="url" rel="index"><span itemprop="name">RedHat</span></a>
                 </span>
                   ，
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/AWS/Landing-Zone/" itemprop="url" rel="index"><span itemprop="name">Landing Zone</span></a>
+                  <a href="/categories/RedHat/Openshift/" itemprop="url" rel="index"><span itemprop="name">Openshift</span></a>
                 </span>
             </span>
 
@@ -266,8 +262,8 @@
       </span>
       <span class="post-meta-item-text">Disqus：</span>
     
-    <a title="disqus" href="/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/#disqus_thread" itemprop="discussionUrl">
-      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020-03-12/实施-AWS-Landing-Zone-3-部署-Initiation-Stack/" itemprop="commentCount"></span>
+    <a title="disqus" href="/2020-03-20/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020-03-20/离线部署-Openshift-Container-Platform-4-3-4-配置-ingress/" itemprop="commentCount"></span>
     </a>
   </span>
   
@@ -277,14 +273,14 @@
                 <i class="fa fa-file-word-o"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>3.4k</span>
+              <span>2k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
                 <i class="fa fa-clock-o"></i>
               </span>
                 <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>3 分钟</span>
+              <span>2 分钟</span>
             </span>
 
         </div>
@@ -296,68 +292,25 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p>本文将介绍 Landing Zone Initiation Stack 的部署, 参数解析以及一些容易出错的地方</p>
+        <p>本文简单配置一下 ingress router, 解决默认的设置的一些问题</p>
+<ul>
+<li>固定 router pod 的放置节点: 默认没有 placement 规则, ingress router pod 可以跑在任意 worker 节点上, 给外部负载均衡器的配置带来麻烦</li>
+<li>替换默认证书为私有 CA 签发证书, 避免内网访问时提示证书不受信任的警告</li>
+</ul>
 <a id="more"></a>
-<h2 id="创建-initiation-stack">创建 Initiation Stack</h2>
-<p>登入组织账号 (即这里的 yl-master), 进入 Cloudformation 服务. 创建一个新的 stack: <img src="create-initiation-stack.png"></p>
-<p>template s3 url 使用 https://s3.amazonaws.com/solutions-reference/aws-landing-zone/v2.3.1/aws-landing-zone-initiation.template</p>
-<p>Landing Zone Initiation stack 是一个比较庞大的 cloudformation template, 大约近 6000 行配置, 其核心部分是 5 个 Lambda 和 7 个 Step Functions. 但这还不是 Landing Zone 的全貌, 因为它引用了很多外部资源, 例如保存在 S3 里的 Lambda 函数实现. 在 Initiation stack template 中大部分内容 (约 2/3) 是 7 个 StateMachines (Step Functions) 的定义.</p>
-<div class="note info">
-            <p>AWS 会对 Landing Zone 进行更新升级, 最新版本的信息可以从 https://aws.amazon.com/solutions/aws-landing-zone/ 获取</p>
-          </div>
-<h3 id="参数详解">参数详解</h3>
-<h4 id="landing-zone-core-account-configuration">Landing Zone Core Account Configuration</h4>
-<p>核心账号配置部分</p>
+<h2 id="ingress-router-placement">Ingress Router Placement</h2>
+<p>我这个环境里只有三个 worker 节点, 配置外部负载均衡器访问 ingress 暴露的应用时也就是用这三个节点作为后端 server pool. 但是实际情况中可能有很多 worker 节点, 因此需要对 ingress router pod 的放置策略加以限制, 便于配置外部负载均衡器.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看 IngressController 的 API spec. 可以看到放置策略支持 nodeSelector 模式</span></span><br><span class="line">oc explain ingresscontroller.spec.nodePlacement --api-version=operator.openshift.io/v1</span><br><span class="line"></span><br><span class="line"><span class="comment"># 给目标 worker 打标签, 标记其角色为 infra</span></span><br><span class="line">oc label node ocp-node-3.int.vopsdev.com node-role.kubernetes.io/worker=infra --overwrite</span><br><span class="line">oc label node ocp-node-4.int.vopsdev.com node-role.kubernetes.io/worker=infra --overwrite</span><br><span class="line">oc label node ocp-node-5.int.vopsdev.com node-role.kubernetes.io/worker=infra --overwrite</span><br><span class="line"></span><br><span class="line"><span class="comment"># 给 ingresscontroller 设置放置策略</span></span><br><span class="line">oc patch ingresscontroller default --<span class="built_in">type</span>=merge -p <span class="string">'&#123;"spec":&#123;"nodePlacement":&#123;"nodeSelector":&#123;"matchLabels":&#123;"node-role.kubernetes.io/worker":"infra"&#125;&#125;&#125;&#125;&#125;'</span> -n openshift-ingress-operator</span><br><span class="line"></span><br><span class="line"><span class="comment"># router pod 进行了重建, 并且调度到目标节点上</span></span><br><span class="line">oc get pod -n openshift-ingress -o wide</span><br></pre></td></tr></table></figure>
+<h2 id="替换-ingress-默认证书">替换 ingress 默认证书</h2>
+<p>使用私有 PKI 的二级 CA (issuing CA) 签发一个 wildcard 证书作为 ingress 默认证书, 包含下面名字</p>
 <ul>
-<li>Shared Service Account Email Address: 填写现存共享服务账号的邮件地址. 如果你的现存环境中还没有共享服务账号也没关系, 如果有需要, Landing Zone 可以帮你创建</li>
-<li>Log Archive Account Email Address: 填写现存的日志账号邮件地址. 同上</li>
-<li>Security Account Email Address: 填写现存的安全审计账号的邮件地址. 同上</li>
-<li>Nest OU Name Delimiter: Colon (:) 使用冒号作为 OU 路径的界定符. 保持默认即可</li>
-<li>Core OU Name: vopsdev-landing-zone:core 根据上一篇文章中的 OU 规划来填写, 这里是核心账号所在的 OU</li>
-<li>Non Core OU Names: vopsdev-landing-zone:production,vopsdev-landing-zone:department,vopsdev-landing-zone:staging,vopsdev-landing-zone:sandbox 根据上一篇文章中的 OU 规划来写, 这里是非核心账号所在的 OU. 使用逗号作为分隔符</li>
-<li>Security Alert Email Address: 接受安全告警邮件的地址. 具体是来自 GuardDuty Finding, Cloudwatch Alarm, Config Rules Compliance Status Change 的消息</li>
-<li>Lock StackSetsExecution Role: Yes. 是否锁定角色 AWSCloudFormationStackSetExecutionRole. Landing Zone 通过 Stackset 来部署资源基线到各个受控账号, 因此会在各个账号下创建角色 AWSCloudFormationStackSetExecutionRole 来执行 stack instance. 该角色具有账户的管理员权限. 锁定该角色的含义是只允许特定的实体 (principal) 来承担 (assume role).</li>
-<li>Subscribe All Change Events Email To Topic: No. 是否订阅所有的配置变更事件. 按需设置</li>
-<li>All Change Events Email: 接受配置变更事件通知的邮件地址</li>
+<li>ocp.vopsdev.com</li>
+<li>*.ocp.vopsdev.com</li>
+<li>*.apps.ocp.vopsdev.com</li>
 </ul>
-<h4 id="landing-zone-pipeline-configuration">Landing Zone Pipeline Configuration</h4>
-<p>流水线配置部分</p>
-<ul>
-<li>Pipeline Approval Stage: Yes. 给 Landing Zone 配置流水线添加手动批准的步骤</li>
-<li>Pipeline Approval Email Address: 批准 Landing Zone 配置流水线的邮件地址</li>
-<li>Auto Build Landing Zone: No. 是否在 initiation stack 创建完成后立刻启动配置流水线. 我们需要对配置进行定制, 因此这里一定需要设置为 No</li>
-</ul>
-<h4 id="shared-services-vpc-configuration">Shared Services VPC Configuration</h4>
-<p>共享服务的 VPC 配置部分</p>
-<ul>
-<li>Shared Services VPC Options: Shared-Services-Network-3-AZs. 选择共享服务账号的 VPC 类型. 仅仅用来生成初始配置. 并不会在 Initiation 阶段创建实际的资源. 后面可以按自己的需要修改初始配置</li>
-<li>Shared Services VPC CIDR: 100.65.0.0/16 共享服务 VPC 的网段. 同上</li>
-</ul>
-<h4 id="vpc-flow-logs-retention-policy">VPC Flow Logs Retention Policy</h4>
-<p>VPC Flow Logs 的留存策略</p>
-<ul>
-<li>VPC Flow Logs Retention In Days: 90</li>
-</ul>
-<h4 id="aws-security-and-configuration-services">AWS Security and Configuration Services</h4>
-<p>安全和配置管理部分</p>
-<ul>
-<li>Enable AWS Security and Configuraiton Monitoring in: All regions 在哪些区域启用安全和配置管理服务 (GuardDuty, Config 之类). 同样也仅仅用于生成初始化配置. 后期可以按需要修改</li>
-</ul>
-<h4 id="aws-config-rules">AWS Config Rules</h4>
-<p>启用哪些 AWS Config Rules. 按默认都启用即可</p>
-<h4 id="add-on-publisher-configuraiton">Add-On Publisher Configuraiton</h4>
-<p>Add-On 产品更新配置部分</p>
-<ul>
-<li>AWS Manages Service Catalog Add-On Portfolio? Manual Updates 手动管理 Add-On Portfolio 的版本更新</li>
-<li>Add-On Update Notification Email: Add-On 更新通知的邮件地址. 按需设置</li>
-</ul>
-<h2 id="关于通知邮件地址">关于通知邮件地址</h2>
-<h3 id="结论">结论</h3>
-<p>不同的 AWS 账号需要不同的邮件地址, 这基本不会出错. 但是在部署 Landing Zone Initiation stack 时需要注意 Security Account Email Address 的邮件地址不能用来接收 Security Alert. 即 Security Alert Email Address 和 Security Account Email Address 不能是同一个.</p>
-<h3 id="原因">原因</h3>
-<p>Initiaton stack 中有这样的资源定义</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">LandingZoneConfigDeployer:</span></span><br><span class="line">  <span class="attr">Type:</span> <span class="string">Custom::ConfigDeployer</span></span><br><span class="line">  <span class="attr">Properties:</span></span><br><span class="line">    <span class="attr">metrics_flag:</span> <span class="type">!FindInMap</span> <span class="string">[Solution,</span> <span class="string">Metrics,</span> <span class="string">SendAnonymousData]</span></span><br><span class="line">    <span class="attr">email_list:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="type">!Ref</span> <span class="string">SharedServicesAccountEmail</span></span><br><span class="line">      <span class="bullet">-</span> <span class="type">!Ref</span> <span class="string">LoggingAccountEmail</span></span><br><span class="line">      <span class="bullet">-</span> <span class="type">!Ref</span> <span class="string">SecurityAccountEmail</span></span><br><span class="line">      <span class="bullet">-</span> <span class="type">!Ref</span> <span class="string">SecurityAlertEmail</span></span><br></pre></td></tr></table></figure>
-<p>而 Lambda 函数 LandingZoneDeploymentLambda 的 config_deployer.py 中会检查 email_list 中是否有重复地址 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">unique_email_validator</span><span class="params">(email_list)</span>:</span></span><br><span class="line">    result = set([x <span class="keyword">for</span> x <span class="keyword">in</span> email_list <span class="keyword">if</span> email_list.count(x) &gt; <span class="number">1</span>])</span><br><span class="line">    duplicate_list = list(result)</span><br><span class="line">    logger.info(<span class="string">"Duplicate Emails: &#123;&#125;"</span>.format(duplicate_list))</span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">not</span> duplicate_list:</span><br><span class="line">        logger.info(<span class="string">"Duplicate emails not found"</span>)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="keyword">raise</span> Exception(<span class="string">"Found duplicate email(s) &#123;&#125; in the parameters."</span>.format(duplicate_list))</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">config_deployer</span><span class="params">(event)</span>:</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        s3 = S3(logger)</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment"># Check if the emails are Unique</span></span><br><span class="line">    unique_email_validator(event.get(<span class="string">'email_list'</span>))</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 让 haproxy router 信任私有根 CA</span></span><br><span class="line">oc create configmap vopsdev-root-ca --from-file=ca-bundle.crt=/etc/pki/ca-trust/<span class="built_in">source</span>/anchors/vopsdev-root-ca-g1.crt -n openshift-config</span><br><span class="line">oc patch proxy/cluster --<span class="built_in">type</span>=merge --patch=<span class="string">'&#123;"spec":&#123;"trustedCA":&#123;"name":"vopsdev-root-ca"&#125;&#125;&#125;'</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 这里的证书使用证书链形式, 包含服务器证书 + 二级 CA 证书</span></span><br><span class="line"><span class="comment"># 由于内网机器都已经信任了根 CA, 结合这里的服务器证书链可以构成完整的 TLS 验证路径</span></span><br><span class="line">oc create secret tls wildcard-ocp-tls --cert=private.wildcard.vopsdev.com.chained.crt --key=private.wildcard.vopsdev.com.key -n openshift-ingress</span><br><span class="line">oc patch ingresscontroller default --<span class="built_in">type</span>=merge -p <span class="string">'&#123;"spec":&#123;"defaultCertificate":&#123;"name":"wildcard-ocp-tls"&#125;&#125;&#125;'</span> -n openshift-ingress-operator</span><br></pre></td></tr></table></figure>
+<p>等待 router pod 重建完成后, 测试登录 web console, 可以发现证书替换已经生效 <img src="ingress-default-certificate.png"></p>
+<p>对于内网环境, 这种 wildcard 形式的默认证书基本够用. 签发一个时效足够长的证书后也不用操心续期的问题. 但是如果想把应用发布到公网上, 还是得需要公网 CA 签发的证书. 目前用的比较多的是 Let's Encrypt, 此时可以结合 Openshift ACME Controller 实现 Let's Encrypt 证书的自动续期.</p>
 
     </div>
 
@@ -373,7 +326,7 @@
   </li>
   <li class="post-copyright-link">
     <strong>本文链接：</strong>
-    <a href="https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/" title="实施 AWS Landing Zone 3: 部署 Initiation Stack">https://notes.yuanlinios.me/2020-03-12/实施-AWS-Landing-Zone-3-部署-Initiation-Stack/</a>
+    <a href="https://notes.yuanlinios.me/2020-03-20/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/" title="离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress">https://notes.yuanlinios.me/2020-03-20/离线部署-Openshift-Container-Platform-4-3-4-配置-ingress/</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="external nofollow noopener noreferrer" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -384,8 +337,8 @@
 
       <footer class="post-footer">
           <div class="post-tags">
-              <a href="/tags/AWS/" rel="tag"># AWS</a>
-              <a href="/tags/Landing-Zone/" rel="tag"># Landing Zone</a>
+              <a href="/tags/RedHat/" rel="tag"># RedHat</a>
+              <a href="/tags/Openshift/" rel="tag"># Openshift</a>
           </div>
 
         
@@ -394,13 +347,10 @@
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-2-%E5%AE%9E%E6%96%BD%E5%89%8D%E5%9C%BA%E6%99%AF%E4%B8%8E%E7%9B%AE%E6%A0%87%E8%A7%84%E5%88%92/" rel="prev" title="实施 AWS Landing Zone 2: 实施前场景与目标规划">
-      <i class="fa fa-chevron-left"></i> 实施 AWS Landing Zone 2: 实施前场景与目标规划
+    <a href="/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/" rel="prev" title="离线部署 Openshift Container Platform 4.3 - 3: 配置本地 ImageStream 和 OperatorHub">
+      <i class="fa fa-chevron-left"></i> 离线部署 Openshift Container Platform 4.3 - 3: 配置本地 ImageStream 和 OperatorHub
     </a></div>
-      <div class="post-nav-item">
-    <a href="/2020-03-15/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-1-%E5%87%86%E5%A4%87%E7%A6%BB%E7%BA%BF%E8%B5%84%E6%BA%90/" rel="next" title="离线部署 Openshift Container Platform 4.3 - 1: 准备离线资源">
-      离线部署 Openshift Container Platform 4.3 - 1: 准备离线资源 <i class="fa fa-chevron-right"></i>
-    </a></div>
+      <div class="post-nav-item"></div>
     </div>
       </footer>
     
@@ -467,7 +417,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#创建-initiation-stack"><span class="nav-number">1.</span> <span class="nav-text">创建 Initiation Stack</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#参数详解"><span class="nav-number">1.1.</span> <span class="nav-text">参数详解</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#landing-zone-core-account-configuration"><span class="nav-number">1.1.1.</span> <span class="nav-text">Landing Zone Core Account Configuration</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#landing-zone-pipeline-configuration"><span class="nav-number">1.1.2.</span> <span class="nav-text">Landing Zone Pipeline Configuration</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#shared-services-vpc-configuration"><span class="nav-number">1.1.3.</span> <span class="nav-text">Shared Services VPC Configuration</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#vpc-flow-logs-retention-policy"><span class="nav-number">1.1.4.</span> <span class="nav-text">VPC Flow Logs Retention Policy</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#aws-security-and-configuration-services"><span class="nav-number">1.1.5.</span> <span class="nav-text">AWS Security and Configuration Services</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#aws-config-rules"><span class="nav-number">1.1.6.</span> <span class="nav-text">AWS Config Rules</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#add-on-publisher-configuraiton"><span class="nav-number">1.1.7.</span> <span class="nav-text">Add-On Publisher Configuraiton</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#关于通知邮件地址"><span class="nav-number">2.</span> <span class="nav-text">关于通知邮件地址</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#结论"><span class="nav-number">2.1.</span> <span class="nav-text">结论</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#原因"><span class="nav-number">2.2.</span> <span class="nav-text">原因</span></a></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#ingress-router-placement"><span class="nav-number">1.</span> <span class="nav-text">Ingress Router Placement</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#替换-ingress-默认证书"><span class="nav-number">2.</span> <span class="nav-text">替换 ingress 默认证书</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -637,9 +587,9 @@
 </script>
 <script>
   var disqus_config = function() {
-    this.page.url = "https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/";
-    this.page.identifier = "2020-03-12/实施-AWS-Landing-Zone-3-部署-Initiation-Stack/";
-    this.page.title = "实施 AWS Landing Zone 3: 部署 Initiation Stack";
+    this.page.url = "https://notes.yuanlinios.me/2020-03-20/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/";
+    this.page.identifier = "2020-03-20/离线部署-Openshift-Container-Platform-4-3-4-配置-ingress/";
+    this.page.title = "离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress";
     };
   NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
     if (window.DISQUS) {

@@ -1,6 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress</title>
+    <url>/2020-03-20/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/</url>
+    <content><![CDATA[<p>本文简单配置一下 ingress router, 解决默认的设置的一些问题</p>
+<ul>
+<li>固定 router pod 的放置节点: 默认没有 placement 规则, ingress router pod 可以跑在任意 worker 节点上, 给外部负载均衡器的配置带来麻烦</li>
+<li>替换默认证书为私有 CA 签发证书, 避免内网访问时提示证书不受信任的警告</li>
+</ul>
+<a id="more"></a>
+<h2 id="ingress-router-placement">Ingress Router Placement</h2>
+<p>我这个环境里只有三个 worker 节点, 配置外部负载均衡器访问 ingress 暴露的应用时也就是用这三个节点作为后端 server pool. 但是实际情况中可能有很多 worker 节点, 因此需要对 ingress router pod 的放置策略加以限制, 便于配置外部负载均衡器.</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 查看 IngressController 的 API spec. 可以看到放置策略支持 nodeSelector 模式</span></span><br><span class="line">oc explain ingresscontroller.spec.nodePlacement --api-version=operator.openshift.io/v1</span><br><span class="line"></span><br><span class="line"><span class="comment"># 给目标 worker 打标签, 标记其角色为 infra</span></span><br><span class="line">oc label node ocp-node-3.int.vopsdev.com node-role.kubernetes.io/worker=infra --overwrite</span><br><span class="line">oc label node ocp-node-4.int.vopsdev.com node-role.kubernetes.io/worker=infra --overwrite</span><br><span class="line">oc label node ocp-node-5.int.vopsdev.com node-role.kubernetes.io/worker=infra --overwrite</span><br><span class="line"></span><br><span class="line"><span class="comment"># 给 ingresscontroller 设置放置策略</span></span><br><span class="line">oc patch ingresscontroller default --<span class="built_in">type</span>=merge -p <span class="string">'&#123;"spec":&#123;"nodePlacement":&#123;"nodeSelector":&#123;"matchLabels":&#123;"node-role.kubernetes.io/worker":"infra"&#125;&#125;&#125;&#125;&#125;'</span> -n openshift-ingress-operator</span><br><span class="line"></span><br><span class="line"><span class="comment"># router pod 进行了重建, 并且调度到目标节点上</span></span><br><span class="line">oc get pod -n openshift-ingress -o wide</span><br></pre></td></tr></table></figure>
+<h2 id="替换-ingress-默认证书">替换 ingress 默认证书</h2>
+<p>使用私有 PKI 的二级 CA (issuing CA) 签发一个 wildcard 证书作为 ingress 默认证书, 包含下面名字</p>
+<ul>
+<li>ocp.vopsdev.com</li>
+<li>*.ocp.vopsdev.com</li>
+<li>*.apps.ocp.vopsdev.com</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 让 haproxy router 信任私有根 CA</span></span><br><span class="line">oc create configmap vopsdev-root-ca --from-file=ca-bundle.crt=/etc/pki/ca-trust/<span class="built_in">source</span>/anchors/vopsdev-root-ca-g1.crt -n openshift-config</span><br><span class="line">oc patch proxy/cluster --<span class="built_in">type</span>=merge --patch=<span class="string">'&#123;"spec":&#123;"trustedCA":&#123;"name":"vopsdev-root-ca"&#125;&#125;&#125;'</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 这里的证书使用证书链形式, 包含服务器证书 + 二级 CA 证书</span></span><br><span class="line"><span class="comment"># 由于内网机器都已经信任了根 CA, 结合这里的服务器证书链可以构成完整的 TLS 验证路径</span></span><br><span class="line">oc create secret tls wildcard-ocp-tls --cert=private.wildcard.vopsdev.com.chained.crt --key=private.wildcard.vopsdev.com.key -n openshift-ingress</span><br><span class="line">oc patch ingresscontroller default --<span class="built_in">type</span>=merge -p <span class="string">'&#123;"spec":&#123;"defaultCertificate":&#123;"name":"wildcard-ocp-tls"&#125;&#125;&#125;'</span> -n openshift-ingress-operator</span><br></pre></td></tr></table></figure>
+<p>等待 router pod 重建完成后, 测试登录 web console, 可以发现证书替换已经生效 <img src="ingress-default-certificate.png"></p>
+<p>对于内网环境, 这种 wildcard 形式的默认证书基本够用. 签发一个时效足够长的证书后也不用操心续期的问题. 但是如果想把应用发布到公网上, 还是得需要公网 CA 签发的证书. 目前用的比较多的是 Let's Encrypt, 此时可以结合 Openshift ACME Controller 实现 Let's Encrypt 证书的自动续期.</p>
+]]></content>
+      <categories>
+        <category>RedHat</category>
+        <category>Openshift</category>
+      </categories>
+      <tags>
+        <tag>RedHat</tag>
+        <tag>Openshift</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>离线部署 Openshift Container Platform 4.3 - 3: 配置本地 ImageStream 和 OperatorHub</title>
     <url>/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/</url>
     <content><![CDATA[<p>本文将使用前面保存私有镜像库的离线资源替换默认的 ImageStream 和 OperatorHub</p>
