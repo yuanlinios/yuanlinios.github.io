@@ -3,7 +3,7 @@
   <entry>
     <title>离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress</title>
     <url>/2020-03-20/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/</url>
-    <content><![CDATA[<p>本文简单配置一下 ingress router, 解决默认的设置的一些问题</p>
+    <content><![CDATA[<p>本文简单配置一下 ingress router, 解决默认设置的一些问题</p>
 <ul>
 <li>固定 router pod 的放置节点: 默认没有 placement 规则, ingress router pod 可以跑在任意 worker 节点上, 给外部负载均衡器的配置带来麻烦</li>
 <li>替换默认证书为私有 CA 签发证书, 避免内网访问时提示证书不受信任的警告</li>
