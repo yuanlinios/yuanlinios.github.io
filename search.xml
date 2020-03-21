@@ -30,6 +30,8 @@
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">docker login -u user1 -p $(oc whoami -t) registry-int.apps.ocp.vopsdev.com</span><br><span class="line">docker pull alpine</span><br><span class="line">docker tag alpine:latest registry-int.apps.ocp.vopsdev.com/sandbox-1/alpine:latest</span><br><span class="line">docker push registry-int.apps.ocp.vopsdev.com/sandbox-1/alpine:latest</span><br></pre></td></tr></table></figure>
 <p>在 minio 的浏览器界面上也可以看到结果</p>
 <p><img src="integrated-registry-test.png"></p>
+<p>使用本地帐号 admin 登录 OCP web console, 可以发现针对 image registry 被删除的状态提示已经消失. 目前还提示 Alertmanager 的 notification 没有正确设置, 这部分会在后面监控配置中解决.</p>
+<p><img src="ocp-status-after-registry-setup.png"></p>
 ]]></content>
       <categories>
         <category>RedHat</category>
