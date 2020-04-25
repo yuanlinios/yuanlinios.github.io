@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://notes.yuanlinios.me/about/index.html</loc>
+    
+    <lastmod>2020-04-25T08:19:57.287Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://notes.yuanlinios.me/2020-03-19/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/</loc>
     
     <lastmod>2020-03-21T12:20:19.429Z</lastmod>
@@ -61,13 +68,6 @@
     <loc>https://notes.yuanlinios.me/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/</loc>
     
     <lastmod>2020-03-16T11:17:03.890Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>https://notes.yuanlinios.me/about/index.html</loc>
-    
-    <lastmod>2020-03-13T15:31:12.859Z</lastmod>
     
   </url>
   
