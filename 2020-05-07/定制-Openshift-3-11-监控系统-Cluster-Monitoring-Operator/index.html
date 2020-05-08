@@ -20,28 +20,32 @@
     var CONFIG = {"hostname":"notes.yuanlinios.me","root":"/","scheme":"Mist","version":"7.7.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"disqus","storage":true,"lazyload":false,"nav":{"disqus":{"text":"Load Disqus","order":-1}},"activeClass":"disqus"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="本文简单配置一下 ingress router, 解决默认设置的一些问题  固定 router pod 的放置节点: 默认没有 placement 规则, ingress router pod 可以跑在任意 worker 节点上, 给外部负载均衡器的配置带来麻烦 替换默认证书为私有 CA 签发证书, 避免内网访问时提示证书不受信任的警告">
+  <meta name="description" content="本文介绍如何对 Openshift (OCP&#x2F;OKD) 3.11 的监控系统 cluster monitoring operator 进行简单定制, 扩展平台监控的范围.">
 <meta property="og:type" content="article">
-<meta property="og:title" content="离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress">
-<meta property="og:url" content="https://notes.yuanlinios.me/2020-03-19/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/index.html">
+<meta property="og:title" content="定制 Openshift 3.11 监控系统 Cluster Monitoring Operator">
+<meta property="og:url" content="https://notes.yuanlinios.me/2020-05-07/%E5%AE%9A%E5%88%B6-Openshift-3-11-%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F-Cluster-Monitoring-Operator/index.html">
 <meta property="og:site_name" content="Lin&#39;s Notes">
-<meta property="og:description" content="本文简单配置一下 ingress router, 解决默认设置的一些问题  固定 router pod 的放置节点: 默认没有 placement 规则, ingress router pod 可以跑在任意 worker 节点上, 给外部负载均衡器的配置带来麻烦 替换默认证书为私有 CA 签发证书, 避免内网访问时提示证书不受信任的警告">
+<meta property="og:description" content="本文介绍如何对 Openshift (OCP&#x2F;OKD) 3.11 的监控系统 cluster monitoring operator 进行简单定制, 扩展平台监控的范围.">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://notes.yuanlinios.me/2020-03-19/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/ingress-default-certificate.png">
-<meta property="article:published_time" content="2020-03-20T02:35:23.000Z">
-<meta property="article:modified_time" content="2020-03-21T12:20:19.429Z">
+<meta property="og:image" content="https://notes.yuanlinios.me/2020-05-07/%E5%AE%9A%E5%88%B6-Openshift-3-11-%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F-Cluster-Monitoring-Operator/cluster-monitoring-operator.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2020-05-07/%E5%AE%9A%E5%88%B6-Openshift-3-11-%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F-Cluster-Monitoring-Operator/kube-state-metrics-interval.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2020-05-07/%E5%AE%9A%E5%88%B6-Openshift-3-11-%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F-Cluster-Monitoring-Operator/alert-rule.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2020-05-07/%E5%AE%9A%E5%88%B6-Openshift-3-11-%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F-Cluster-Monitoring-Operator/custom-target.png">
+<meta property="article:published_time" content="2020-05-07T17:03:49.000Z">
+<meta property="article:modified_time" content="2020-05-08T10:42:14.479Z">
 <meta property="article:author" content="L. Yuan">
 <meta property="article:tag" content="Openshift">
-<meta property="article:tag" content=" disconnected">
-<meta property="article:tag" content=" ingress">
-<meta property="article:tag" content=" router">
-<meta property="article:tag" content=" certificate">
-<meta property="article:tag" content=" 证书">
-<meta property="article:tag" content=" PKI">
+<meta property="article:tag" content=" OKD">
+<meta property="article:tag" content=" OCP">
+<meta property="article:tag" content=" cluster monitoring operator">
+<meta property="article:tag" content=" prometheus">
+<meta property="article:tag" content=" alertmanager">
+<meta property="article:tag" content=" alert rule">
+<meta property="article:tag" content=" 定制">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://notes.yuanlinios.me/2020-03-19/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/ingress-default-certificate.png">
+<meta name="twitter:image" content="https://notes.yuanlinios.me/2020-05-07/%E5%AE%9A%E5%88%B6-Openshift-3-11-%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F-Cluster-Monitoring-Operator/cluster-monitoring-operator.png">
 
-<link rel="canonical" href="https://notes.yuanlinios.me/2020-03-19/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/">
+<link rel="canonical" href="https://notes.yuanlinios.me/2020-05-07/%E5%AE%9A%E5%88%B6-Openshift-3-11-%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F-Cluster-Monitoring-Operator/">
 
 
 <script id="page-configurations">
@@ -53,7 +57,7 @@
   };
 </script>
 
-  <title>离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress | Lin's Notes</title>
+  <title>定制 Openshift 3.11 监控系统 Cluster Monitoring Operator | Lin's Notes</title>
   
 
 
@@ -209,7 +213,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/2020-03-19/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/">
+    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/2020-05-07/%E5%AE%9A%E5%88%B6-Openshift-3-11-%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F-Cluster-Monitoring-Operator/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -222,7 +226,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress
+          定制 Openshift 3.11 监控系统 Cluster Monitoring Operator
         </h2>
 
         <div class="post-meta">
@@ -231,16 +235,10 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
+              
 
-              <time title="创建时间：2020-03-20 10:35:23" itemprop="dateCreated datePublished" datetime="2020-03-20T10:35:23+08:00">2020-03-20</time>
+              <time title="创建时间：2020-05-08 01:03:49 / 修改时间：18:42:14" itemprop="dateCreated datePublished" datetime="2020-05-08T01:03:49+08:00">2020-05-08</time>
             </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-03-21 20:20:19" itemprop="dateModified" datetime="2020-03-21T20:20:19+08:00">2020-03-21</time>
-              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="fa fa-folder-o"></i>
@@ -271,8 +269,8 @@
       </span>
       <span class="post-meta-item-text">Disqus：</span>
     
-    <a title="disqus" href="/2020-03-19/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/#disqus_thread" itemprop="discussionUrl">
-      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020-03-19/离线部署-Openshift-Container-Platform-4-3-4-配置-ingress/" itemprop="commentCount"></span>
+    <a title="disqus" href="/2020-05-07/%E5%AE%9A%E5%88%B6-Openshift-3-11-%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F-Cluster-Monitoring-Operator/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020-05-07/定制-Openshift-3-11-监控系统-Cluster-Monitoring-Operator/" itemprop="commentCount"></span>
     </a>
   </span>
   
@@ -282,14 +280,14 @@
                 <i class="fa fa-file-word-o"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>2k</span>
+              <span>4.5k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
                 <i class="fa fa-clock-o"></i>
               </span>
                 <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>2 分钟</span>
+              <span>4 分钟</span>
             </span>
 
         </div>
@@ -301,25 +299,97 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p>本文简单配置一下 ingress router, 解决默认设置的一些问题</p>
+        <p>本文介绍如何对 Openshift (OCP/OKD) 3.11 的监控系统 cluster monitoring operator 进行简单定制, 扩展平台监控的范围. <a id="more"></a></p>
+<h2 id="cluster-monitoring-operator-介绍">Cluster Monitoring Operator 介绍</h2>
+<p>Openshift 3.11 以及后续的 4.x 平台都使用预定义配置的 cluster monitoring operator 来做平台监控. Cluster monitoring operator 管理 prometheus operator, grafana, kube-state-metrics 和 node-exporter. 而 prometheus operator 再负责管理 prometheus 和 alertmanager. 各组间之间的关系如下图所示:</p>
+<p><img src="cluster-monitoring-operator.png"></p>
+<p>通过检查 prometheus 的配置可以发现其 scrape 对象包括</p>
 <ul>
-<li>固定 router pod 的放置节点: 默认没有 placement 规则, ingress router pod 可以跑在任意 worker 节点上, 给外部负载均衡器的配置带来麻烦</li>
-<li>替换默认证书为私有 CA 签发证书, 避免内网访问时提示证书不受信任的警告</li>
+<li>prometheus</li>
+<li>prometheus operator</li>
+<li>cluster monitoring operator</li>
+<li>alertmanager</li>
+<li>kubernete apiserver</li>
+<li>kubelet</li>
+<li>kube-controller</li>
+<li>kube-state-metrics</li>
+<li>node-exporter</li>
+<li>etcd (可选择启用)</li>
 </ul>
-<a id="more"></a>
-<h2 id="ingress-router-placement">Ingress Router Placement</h2>
-<p>我这个环境里只有三个 worker 节点, 配置外部负载均衡器访问 ingress 暴露的应用时也就是用这三个节点作为后端 server pool. 但是实际情况中可能有很多 worker 节点, 因此需要对 ingress router pod 的放置策略加以限制, 便于配置外部负载均衡器.</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看 IngressController 的 API spec. 可以看到放置策略支持 nodeSelector 模式</span></span><br><span class="line">oc explain ingresscontroller.spec.nodePlacement --api-version=operator.openshift.io/v1</span><br><span class="line"></span><br><span class="line"><span class="comment"># 给目标 worker 打标签, 标记其角色为 infra</span></span><br><span class="line">oc label node ocp-node-3.int.vopsdev.com node-role.kubernetes.io/worker=infra --overwrite</span><br><span class="line">oc label node ocp-node-4.int.vopsdev.com node-role.kubernetes.io/worker=infra --overwrite</span><br><span class="line">oc label node ocp-node-5.int.vopsdev.com node-role.kubernetes.io/worker=infra --overwrite</span><br><span class="line"></span><br><span class="line"><span class="comment"># 给 ingresscontroller 设置放置策略</span></span><br><span class="line">oc patch ingresscontroller default --<span class="built_in">type</span>=merge -p <span class="string">'&#123;"spec":&#123;"nodePlacement":&#123;"nodeSelector":&#123;"matchLabels":&#123;"node-role.kubernetes.io/worker":"infra"&#125;&#125;&#125;&#125;&#125;'</span> -n openshift-ingress-operator</span><br><span class="line"></span><br><span class="line"><span class="comment"># router pod 进行了重建, 并且调度到目标节点上</span></span><br><span class="line">oc get pod -n openshift-ingress -o wide</span><br></pre></td></tr></table></figure>
-<h2 id="替换-ingress-默认证书">替换 ingress 默认证书</h2>
-<p>使用私有 PKI 的二级 CA (issuing CA) 签发一个 wildcard 证书作为 ingress 默认证书, 包含下面名字</p>
+<p>对于一个中小型 Openshift 集群的平台层面 (不包含应用特定 metrics), 用这些对象的 metrics 来做平台监控其实也差不多够用了. 然而 Openshift 监控套件的预定义配置并没有覆盖非系统级的 namespace.</p>
+<p>举个例子, 我的应用 pod 跑在 myproj project/namespace 下. 虽然 kube-state-metrics 会收集 myproj 名字空间下资源 (deployment/statefulset/pod) 的状态信息, 但是预定义的 alert rules 只选取 openshift-.*|kube-.*|default|logging 这些 namespace 的 metrics 来进行评估. 导致的结果是: 虽然收集了应用 namespace 下的资源状态信息, 却无法实现告警.</p>
+<p>遗憾的是 Openshift 并不支持用户扩展其平台监控套装的监控范围. 文档原文如下</p>
+<blockquote>
+<p>Explicitly unsupported cases include:</p>
 <ul>
-<li>ocp.vopsdev.com</li>
-<li>*.ocp.vopsdev.com</li>
-<li>*.apps.ocp.vopsdev.com</li>
+<li>Creating additional ServiceMonitor objects in the openshift-monitoring namespace, thereby extending the targets the cluster monitoring Prometheus instance scrapes. This can cause collisions and load differences that cannot be accounted for, therefore the Prometheus setup can be unstable.</li>
+<li>Creating additional ConfigMap objects, that cause the cluster monitoring Prometheus instance to include additional alerting and recording rules. Note that this behavior is known to cause a breaking behavior if applied, as Prometheus 2.0 will ship with a new rule file syntax.</li>
 </ul>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 让 haproxy router 信任私有根 CA</span></span><br><span class="line">oc create configmap vopsdev-root-ca --from-file=ca-bundle.crt=/etc/pki/ca-trust/<span class="built_in">source</span>/anchors/vopsdev-root-ca-g1.crt -n openshift-config</span><br><span class="line">oc patch proxy/cluster --<span class="built_in">type</span>=merge --patch=<span class="string">'&#123;"spec":&#123;"trustedCA":&#123;"name":"vopsdev-root-ca"&#125;&#125;&#125;'</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 这里的证书使用证书链形式, 包含服务器证书 + 二级 CA 证书</span></span><br><span class="line"><span class="comment"># 由于内网机器都已经信任了根 CA, 结合这里的服务器证书链可以构成完整的 TLS 验证路径</span></span><br><span class="line">oc create secret tls wildcard-ocp-tls --cert=private.wildcard.vopsdev.com.chained.crt --key=private.wildcard.vopsdev.com.key -n openshift-ingress</span><br><span class="line">oc patch ingresscontroller default --<span class="built_in">type</span>=merge -p <span class="string">'&#123;"spec":&#123;"defaultCertificate":&#123;"name":"wildcard-ocp-tls"&#125;&#125;&#125;'</span> -n openshift-ingress-operator</span><br></pre></td></tr></table></figure>
-<p>等待 router pod 重建完成后, 测试登录 web console, 可以发现证书替换已经生效 <img src="ingress-default-certificate.png"></p>
-<p>对于内网环境, 这种 wildcard 形式的默认证书基本够用. 签发一个时效足够长的证书后也不用操心续期的问题. 但是如果想把应用发布到公网上, 还是得需要公网 CA 签发的证书. 目前用的比较多的是 Let's Encrypt, 此时可以结合 Openshift ACME Controller 实现为 ingress 资源自动申请 Let's Encrypt 证书并自动续期.</p>
+</blockquote>
+<p>如果想让监控覆盖到用户的 namespace, RedHat 给出的建议是另外单独部署 prometheus 套件. 对于大型集群, 这可能是一个合理的建议. 但是对于一个小型集群, 如果本身就只有几个用户级别的 namespace, 总共十几或几十个 pod, 你让我再单独来一套 prometheus? 实在是很蛋疼.</p>
+<p>如果你使用的是订阅版本的 Openshift Container Platform, 为了避免维保/技术支持的麻烦, 请遵循 RedHat 的建议. 如果你使用的是社区版本的 OKD, 可以继续往下看: 如何改造 cluster monitoring operator 来满足定制化需求.</p>
+<h2 id="定制化方案">定制化方案</h2>
+<h3 id="需求">需求</h3>
+<p>下面这些应该是非常基本的定制化需求</p>
+<ul>
+<li>扩展告警的监控范围, 除了系统级别的 namespace, 还要覆盖所有应用 namespace</li>
+<li>调整 target 的 scrape interval. 例如调整 kube-state-metrics 的刮取间隔为 1m</li>
+<li>定制 alert rules, 例如调整触发告警的状态持续时间. 像 KubePodCrashLooping, KubeNodeNotReady 默认设置状态持续 1h 才会触发告警, 黄花菜都凉了吧</li>
+<li>添加额外的 service monitor 来包含自定义应用</li>
+</ul>
+<p>再次吐槽 RedHat 的产品, 经常弄一些非生产可用, 跟玩具一样的东西出来, 这个不支持那个也不支持, 性能/稳定性/扩展性一堆问题. 类似的还有 Openshift 平台的 EFK 日志系统.</p>
+<h3 id="定制化配置">定制化配置</h3>
+<p>由于这些定制化需求在 prometheus + alertmanager 体系中对应的是一组配置文件, 一个很自然的想法是能不能重新构建镜像, 把这些定制化的配置文件覆盖到 cluster monitoring operator 镜像里来实现需求?</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 获取 cluster monitoring operator 源代码</span></span><br><span class="line">go get -u github.com/openshift/cluster-monitoring-operator/...</span><br><span class="line"><span class="built_in">cd</span> <span class="variable">$GOPATH</span>/src/github.com/openshift/cluster-monitoring-operator/</span><br><span class="line">git checkout release-3.11</span><br></pre></td></tr></table></figure>
+<p>简单检查一下 cluster monitoring operator 的源码就可以发现其实并不可行, 原因是这些预定义配置文件会被 go-bindata 用来生成 go 代码, 最终会成为 operator binary 的一部分. 即这些配置文件 "固化" 在二进制文件中了. 我猜想这也是 RedHat 迟迟无法提供针对 cluster monitoring operator 进行定制化配置的原因.</p>
+<p>查看<code>Makefile</code>可以大致了解: <code>${ASSERTS}</code> 这个目标会执行 <code>./hack/build-jsonnet.sh</code>来产生所有预定义配置, 而 <code>pkg/manifests/bindata.go</code> 这个目标会利用预定义配置生成 go 代码. 因此只需要修改 <code>./hack/build-jsonnet.sh</code> 脚本替换预定义配置即可实现需求.</p>
+<p>在<code>hack</code>目录下建立路径来存放需要定制的配置文件. 把预定义文件复制过来, 然后按照需要修改 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mkdir -p hack/customization/assets/&#123;prometheus-k8s,kube-state-metrics&#125;</span><br><span class="line">cp assets/prometheus-k8s/rules.yaml hack/customization/assets/prometheus-k8s/rules.yaml</span><br><span class="line">cp assets/kube-state-metrics/service-monitor.yaml hack/customization/assets/kube-state-metrics/service-monitor.yaml</span><br></pre></td></tr></table></figure></p>
+<p>定制 kube-state-metrics target 的刮取时间间隔需要修改<code>service-monitor.yaml</code>的 interval 字段.</p>
+<p>定制告警触发的状态持续时间需要修改<code>rules.yaml</code>中 alert rule 的定义. 例如我调整了下面告警的状态持续时间</p>
+<ul>
+<li>kube-state-metrics job 相关
+<ul>
+<li>KubePodCrashLooping</li>
+<li>KubePodNotReady</li>
+<li>KubeDeploymentGenerationMismatch</li>
+<li>KubeDeploymentReplicasMismatch</li>
+<li>KubeStatefulSetReplicasMismatch</li>
+<li>KubeStatefulSetGenerationMismatch</li>
+<li>KubeDaemonSetRolloutStuck</li>
+<li>KubeDaemonSetNotScheduled</li>
+<li>KubeDaemonSetMisScheduled</li>
+<li>KubeCPUOvercommit</li>
+<li>KubeMemOvercommit</li>
+<li>KubeQuotaExceeded</li>
+<li>KubeNodeNotReady</li>
+</ul></li>
+<li>kubelet job 相关
+<ul>
+<li>KubeletDown<br>
+</li>
+</ul></li>
+<li>node-export job 相关
+<ul>
+<li>NodeExportDown</li>
+</ul></li>
+<li>其他
+<ul>
+<li>TargetDown</li>
+</ul></li>
+</ul>
+<p>然后修改<code>hack/build-jsonnet.sh</code>文件, 用自定义配置替换默认配置</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># hack: my custmized files</span></span><br><span class="line">cat hack/customization/assets/prometheus-k8s/rules.yaml &gt; assets/prometheus-k8s/rules.yaml</span><br><span class="line">cat hack/customization/assets/kube-state-metrics/service-monitor.yaml &gt; assets/kube-state-metrics/service-monitor.yaml</span><br><span class="line"></span><br><span class="line"><span class="comment"># These manifests are generated by kube-prmoetheus, but are not necessary in</span></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>添加额外的 service monitor 比较简单, 无需修改这里的代码. 后面部署监控套件后, 在 openshift-monitoring 项目下创建自定义 service monitor 资源即可, prometheus operator 会根据 service monitor 更新 prometheus 的配置文件.</p>
+<h3 id="构建定制化镜像">构建定制化镜像</h3>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># build operator binary</span></span><br><span class="line">make generate</span><br><span class="line">make crossbuild</span><br><span class="line"></span><br><span class="line"><span class="comment"># build image and push</span></span><br><span class="line">docker build -t quay.svc.vopsdev.com/openshift3/ose-cluster-monitoring-operator:v3.11-rev1 .</span><br><span class="line">docker push quay.svc.vopsdev.com/openshift3/ose-cluster-monitoring-operator:v3.11-rev1</span><br></pre></td></tr></table></figure>
+<h2 id="测试">测试</h2>
+<p>在 inventory 文件中通过<code>openshift_cluster_monitoring_operator_image</code>参数指定定制镜像 quay.svc.vopsdev.com/openshift3/ose-cluster-monitoring-operator:v3.11-rev1. 重新部署集群监控套装.</p>
+<p>登录 prometheus 界面确认自定义配置已经生效</p>
+<ol type="1">
+<li><p>调整 kube-state-metrics 的 metrics 收集周期: <img src="kube-state-metrics-interval.png"></p></li>
+<li><p>扩展 alert 到所有 namespace 并调整持续时间: <img src="alert-rule.png"></p></li>
+<li><p>自定义 target 配置: <img src="custom-target.png"></p></li>
+</ol>
 
     </div>
 
@@ -335,7 +405,7 @@
   </li>
   <li class="post-copyright-link">
     <strong>本文链接：</strong>
-    <a href="https://notes.yuanlinios.me/2020-03-19/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/" title="离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress">https://notes.yuanlinios.me/2020-03-19/离线部署-Openshift-Container-Platform-4-3-4-配置-ingress/</a>
+    <a href="https://notes.yuanlinios.me/2020-05-07/%E5%AE%9A%E5%88%B6-Openshift-3-11-%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F-Cluster-Monitoring-Operator/" title="定制 Openshift 3.11 监控系统 Cluster Monitoring Operator">https://notes.yuanlinios.me/2020-05-07/定制-Openshift-3-11-监控系统-Cluster-Monitoring-Operator/</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="external nofollow noopener noreferrer" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -356,13 +426,10 @@
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/" rel="prev" title="离线部署 Openshift Container Platform 4.3 - 3: 配置本地 ImageStream 和 OperatorHub">
-      <i class="fa fa-chevron-left"></i> 离线部署 Openshift Container Platform 4.3 - 3: 配置本地 ImageStream 和 OperatorHub
+    <a href="/2020-03-21/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-6-%E9%85%8D%E7%BD%AE%E6%8C%81%E4%B9%85%E5%AD%98%E5%82%A8/" rel="prev" title="离线部署 Openshift Container Platform 4.3 - 6: 配置持久存储">
+      <i class="fa fa-chevron-left"></i> 离线部署 Openshift Container Platform 4.3 - 6: 配置持久存储
     </a></div>
-      <div class="post-nav-item">
-    <a href="/2020-03-20/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-5-%E9%85%8D%E7%BD%AE-registry-%E4%BD%BF%E7%94%A8%E6%8C%81%E4%B9%85%E5%AD%98%E5%82%A8/" rel="next" title="离线部署 Openshift Container Platform 4.3 - 5: 配置 registry 使用持久存储">
-      离线部署 Openshift Container Platform 4.3 - 5: 配置 registry 使用持久存储 <i class="fa fa-chevron-right"></i>
-    </a></div>
+      <div class="post-nav-item"></div>
     </div>
       </footer>
     
@@ -429,7 +496,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#ingress-router-placement"><span class="nav-number">1.</span> <span class="nav-text">Ingress Router Placement</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#替换-ingress-默认证书"><span class="nav-number">2.</span> <span class="nav-text">替换 ingress 默认证书</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#cluster-monitoring-operator-介绍"><span class="nav-number">1.</span> <span class="nav-text">Cluster Monitoring Operator 介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#定制化方案"><span class="nav-number">2.</span> <span class="nav-text">定制化方案</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#需求"><span class="nav-number">2.1.</span> <span class="nav-text">需求</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#定制化配置"><span class="nav-number">2.2.</span> <span class="nav-text">定制化配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#构建定制化镜像"><span class="nav-number">2.3.</span> <span class="nav-text">构建定制化镜像</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#测试"><span class="nav-number">3.</span> <span class="nav-text">测试</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -599,9 +666,9 @@
 </script>
 <script>
   var disqus_config = function() {
-    this.page.url = "https://notes.yuanlinios.me/2020-03-19/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/";
-    this.page.identifier = "2020-03-19/离线部署-Openshift-Container-Platform-4-3-4-配置-ingress/";
-    this.page.title = "离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress";
+    this.page.url = "https://notes.yuanlinios.me/2020-05-07/%E5%AE%9A%E5%88%B6-Openshift-3-11-%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F-Cluster-Monitoring-Operator/";
+    this.page.identifier = "2020-05-07/定制-Openshift-3-11-监控系统-Cluster-Monitoring-Operator/";
+    this.page.title = "定制 Openshift 3.11 监控系统 Cluster Monitoring Operator";
     };
   NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
     if (window.DISQUS) {
