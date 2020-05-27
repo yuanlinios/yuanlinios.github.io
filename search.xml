@@ -480,8 +480,8 @@
 <h3 id="私有镜像库">私有镜像库</h3>
 <p>离线镜像会保存到私有镜像库中, 以供 OCP 安装和运行时使用, <strong>要求支持 version 2 schema 2 (manifest list)</strong>. 我这里选择的是 <strong>Quay 3</strong></p>
 <ul>
-<li>Nexus 目前还不支持 manifest list: <a href="https://issues.sonatype.org/browse/NEXUS-18546" target="_blank" rel="external nofollow noopener noreferrer">NEXUS-18546</a></li>
-<li>Harbor 目前还不支持 manifest list: <a href="https://github.com/goharbor/harbor/issues/6522" target="_blank" rel="external nofollow noopener noreferrer">6522</a></li>
+<li><del>Nexus 目前还不支持 manifest list: <a href="https://issues.sonatype.org/browse/NEXUS-18546" target="_blank" rel="external nofollow noopener noreferrer">NEXUS-18546</a></del></li>
+<li><del>Harbor 目前还不支持 manifest list: <a href="https://github.com/goharbor/harbor/issues/6522" target="_blank" rel="external nofollow noopener noreferrer">6522</a></del></li>
 </ul>
 <h2 id="关于镜像的获取">关于镜像的获取</h2>
 <p>发现很多人误以为必须联系红帽销售, 签单之后才可以试用 OCP4, 实际上并不是这样. 注册一个<a href="https://developers.redhat.com" target="_blank" rel="external nofollow noopener noreferrer">开发者账号</a> 后就可以获得 quay.io, registry.redhat.io 的 pull secret 来进行测试实验了.</p>
