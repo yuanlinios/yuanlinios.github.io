@@ -3,7 +3,7 @@
   <entry>
     <title>使用 tlog 在 CentOS 7 上实施 ssh 会话记录</title>
     <url>/2020-05-29/%E4%BD%BF%E7%94%A8-tlog-%E5%9C%A8-CentOS-7-%E4%B8%8A%E5%AE%9E%E6%96%BD-ssh-%E4%BC%9A%E8%AF%9D%E8%AE%B0%E5%BD%95/</url>
-    <content><![CDATA[<p>Native Session Recording 是 RHEL 8 / CentOS 8 引入的新功能, 可以方便的录制用户会话用以审计. 根据<a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/recording_sessions/index" target="_blank" rel="external nofollow noopener noreferrer">官方文档</a>, 在 RHEL 8 或者 CentOS 8 上配置非常容易. 由于目前我的大部分服务器还是跑在 CentOS 7 上, 很自然的想能否将这套方案在 CentOS 7 上部署出来. 原本以为很容易, 实际做下来才发现坑不少. 这里做一个简要的记录 <a id="more"></a></p>
+    <content><![CDATA[<p>Native Session Recording 是 RHEL 8 / CentOS 8 引入的新功能, 可以方便的录制用户会话用以审计. 按照<a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/recording_sessions/index" target="_blank" rel="external nofollow noopener noreferrer">官方文档</a>的步骤, 在 RHEL 8 或者 CentOS 8 上配置非常容易. 由于目前我的大部分服务器还是跑在 CentOS 7 上, 很自然的想能否将这套方案在 CentOS 7 上部署出来. 原本以为很容易, 实际做下来才发现坑不少. 这里做一个简要的记录 <a id="more"></a></p>
 <h2 id="tlog-会话记录的组件和原理">tlog 会话记录的组件和原理</h2>
 <p>之前也有不少开源工具可以提供 ssh 会话录制的功能, 比如 script + scriptreplay. 不过也就是玩具的水平, 要真正生产可用还需要大量的 DIY 脚本来辅助. 而 tlog 算是一个相对比较成熟的开源方案了: 使用简便, 搭配 cockpit 可以方便的管理会话记录, 针对重放也提供了丰富的控制.</p>
 <h3 id="基本原理">基本原理</h3>
