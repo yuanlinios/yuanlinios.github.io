@@ -28,7 +28,7 @@
 <meta property="og:description" content="对于敏感信息 (密码&#x2F;私钥之类), Ansible 提供了 ansible-vault 工具将其加密保存. 运行 playbook 时, 通过输入密码或者读取密码文件来解密, 算是一个简单有效的方案. Hashicorp Vault 则是一个有名的私密信息管理工具. 如果公司已经开始使用 vault, 当然希望能够集中管理各种私密信息, 而不是各个工具各自为战. 这里简单介绍如何使用 vault">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2020-07-07T01:31:31.000Z">
-<meta property="article:modified_time" content="2020-07-07T16:15:35.052Z">
+<meta property="article:modified_time" content="2020-07-08T08:19:13.023Z">
 <meta property="article:author" content="L. Yuan">
 <meta property="article:tag" content="ansible">
 <meta property="article:tag" content="vault">
@@ -233,7 +233,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-07-08 00:15:35" itemprop="dateModified" datetime="2020-07-08T00:15:35+08:00">2020-07-08</time>
+                <time title="修改时间：2020-07-08 16:19:13" itemprop="dateModified" datetime="2020-07-08T16:19:13+08:00">2020-07-08</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -307,8 +307,8 @@
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">- name: rotate root password in all hosts</span><br><span class="line">  hosts:</span><br><span class="line">  - all</span><br><span class="line">  roles:</span><br><span class="line">  - role: rotate_local_password</span><br><span class="line">    vars:</span><br><span class="line">      vault_param: &quot;secret&#x3D;secret&#x2F;data&#x2F;dc1&#x2F;local-password&#x2F;root:data url&#x3D;https:&#x2F;&#x2F;vault.svc.vopsdev.com:8200 ca_cert&#x3D;&#x2F;etc&#x2F;pki&#x2F;ca-trust&#x2F;source&#x2F;anchors&#x2F;private-trusted-bundle.pem&quot;</span><br><span class="line">      account: root</span><br><span class="line">      new_password: &quot;&#123;&#123; lookup(&#39;hashi_vault&#39;, vault_param)[&#39;value&#39;] &#125;&#125;&quot;</span><br></pre></td></tr></table></figure>
 <p>ansible 需要获取用户的 vault token 来访问 vault 数据. 将登录 vault 的用户名/密码或者 vault token 直接写入 lookup 参数显然不合适. 有几种可行的方法:</p>
 <ul>
-<li>用户先执行 <code>vault login ...</code> 通过认证引擎登录 vault, 这样就会在家目录下产生 .vault-token 文件, ansible 会查找这个文件</li>
-<li>用户将 vault token 通过环境变量 VAULT_TOKEN 导出, ansible 也会查找此环境变量</li>
+<li>用户先执行 <code>vault login ...</code> 通过认证引擎登录 vault, 这样就会在家目录下产生 .vault-token 文件, 用于和 vault 交互</li>
+<li>用户将 vault token 通过环境变量 VAULT_TOKEN 导出, 使用此环境变量和 vault 交互</li>
 </ul>
 <h2 id="示例-rotate-certificate">示例: rotate certificate</h2>
 <p>将更新的 https 证书和私钥保存到 vault 中, 然后通过 ansible 分发到服务器上. <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">vault kv put secret&#x2F;dc1&#x2F;rproxy&#x2F;certificate value&#x3D;@fullchain.pem</span><br><span class="line">vault kv put secret&#x2F;dc1&#x2F;rproxy&#x2F;privatekey value&#x3D;@privkey.pem</span><br></pre></td></tr></table></figure></p>
