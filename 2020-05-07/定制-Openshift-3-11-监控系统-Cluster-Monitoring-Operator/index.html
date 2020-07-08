@@ -33,7 +33,7 @@
 <meta property="og:image" content="https://notes.yuanlinios.me/2020-05-07/%E5%AE%9A%E5%88%B6-Openshift-3-11-%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F-Cluster-Monitoring-Operator/custom-target.png">
 <meta property="og:image" content="https://notes.yuanlinios.me/2020-05-07/%E5%AE%9A%E5%88%B6-Openshift-3-11-%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F-Cluster-Monitoring-Operator/custom-alert-rule.png">
 <meta property="article:published_time" content="2020-05-07T17:03:49.000Z">
-<meta property="article:modified_time" content="2020-05-14T13:40:25.555Z">
+<meta property="article:modified_time" content="2020-05-14T04:00:00.000Z">
 <meta property="article:author" content="L. Yuan">
 <meta property="article:tag" content="Openshift">
 <meta property="article:tag" content=" OKD">
@@ -244,7 +244,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-05-14 21:40:25" itemprop="dateModified" datetime="2020-05-14T21:40:25+08:00">2020-05-14</time>
+                <time title="修改时间：2020-05-14 12:00:00" itemprop="dateModified" datetime="2020-05-14T12:00:00+08:00">2020-05-14</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -345,7 +345,7 @@
 <li>添加自定义告警规则</li>
 <li>添加自定义 service monitor 来包含用户应用</li>
 </ul>
-<p>再次吐槽 RedHat 的产品, 经常弄一些跟玩具一样的东西出来, 性能/稳定性/扩展性/可定制性上有诸多限制. 类似的还有 Openshift 平台的 EFK 日志系统.</p>
+<p>再次吐槽 RedHat 的产品, 经常弄一些跟玩具一样的东西出来, 性能/稳定性/扩展性/可定制性上有诸多限制. 类似的还有 Openshift 平台的 EFK 日志系统, Openshift 3 的 IPSec 方案 (经过生产验证了吗? 就敢往文档里面写? <a href="https://github.com/libreswan/libreswan/issues/185" target="_blank" rel="external nofollow noopener noreferrer">#185</a>) 等, 我就不一一点了</p>
 <h3 id="添加自定义配置">添加自定义配置</h3>
 <p>上面需求中的第四和第五项属于添加自定义配置, 比较容易实现.</p>
 <p>Prometheus 规则和监控 target 配置都是通过自定义资源 (Custom Resource) 来管理</p>
