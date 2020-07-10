@@ -20,27 +20,40 @@
     var CONFIG = {"hostname":"notes.yuanlinios.me","root":"/","scheme":"Mist","version":"7.7.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"disqus","storage":true,"lazyload":false,"nav":{"disqus":{"text":"Load Disqus","order":-1}},"activeClass":"disqus"},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta property="og:type" content="website">
-<meta property="og:title" content="Lin&#39;s Notes">
-<meta property="og:url" content="https://notes.yuanlinios.me/page/2/index.html">
+  <meta name="description" content="本文简单配置一下 ingress router, 解决默认设置的一些问题  固定 router pod 的放置节点: 默认没有 placement 规则, ingress router pod 可以跑在任意 worker 节点上, 给外部负载均衡器的配置带来麻烦 替换默认证书为私有 CA 签发证书, 避免内网访问时提示证书不受信任的警告">
+<meta property="og:type" content="article">
+<meta property="og:title" content="离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress">
+<meta property="og:url" content="https://notes.yuanlinios.me/2332552694/index.html">
 <meta property="og:site_name" content="Lin&#39;s Notes">
+<meta property="og:description" content="本文简单配置一下 ingress router, 解决默认设置的一些问题  固定 router pod 的放置节点: 默认没有 placement 规则, ingress router pod 可以跑在任意 worker 节点上, 给外部负载均衡器的配置带来麻烦 替换默认证书为私有 CA 签发证书, 避免内网访问时提示证书不受信任的警告">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://notes.yuanlinios.me/2332552694/ingress-default-certificate.png">
+<meta property="article:published_time" content="2020-03-20T02:35:23.000Z">
+<meta property="article:modified_time" content="2020-07-10T17:45:22.950Z">
 <meta property="article:author" content="L. Yuan">
+<meta property="article:tag" content="Openshift">
+<meta property="article:tag" content=" disconnected">
+<meta property="article:tag" content=" ingress">
+<meta property="article:tag" content=" router">
+<meta property="article:tag" content=" certificate">
+<meta property="article:tag" content=" 证书">
+<meta property="article:tag" content=" PKI">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://notes.yuanlinios.me/2332552694/ingress-default-certificate.png">
 
-<link rel="canonical" href="https://notes.yuanlinios.me/page/2/">
+<link rel="canonical" href="https://notes.yuanlinios.me/2332552694/">
 
 
 <script id="page-configurations">
   // https://hexo.io/docs/variables.html
   CONFIG.page = {
     sidebar: "",
-    isHome : true,
-    isPost : false
+    isHome : false,
+    isPost : true
   };
 </script>
 
-  <title>Lin's Notes</title>
+  <title>离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress | Lin's Notes</title>
   
 
 
@@ -192,11 +205,11 @@
             
 
   <div class="posts-expand">
-        
+      
   
   
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/2267786039/">
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/2332552694/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -209,8 +222,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2267786039/" class="post-title-link" itemprop="url">实施 AWS Landing Zone 3: 部署 Initiation Stack</a>
+          离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress
         </h2>
 
         <div class="post-meta">
@@ -220,7 +232,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2020-03-13 00:42:14" itemprop="dateCreated datePublished" datetime="2020-03-13T00:42:14+08:00">2020-03-13</time>
+              <time title="创建时间：2020-03-20 10:35:23" itemprop="dateCreated datePublished" datetime="2020-03-20T10:35:23+08:00">2020-03-20</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
@@ -240,6 +252,13 @@
             </span>
 
           
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span>
   
   <span class="post-meta-item">
     
@@ -248,8 +267,8 @@
       </span>
       <span class="post-meta-item-text">Disqus：</span>
     
-    <a title="disqus" href="/2267786039/#disqus_thread" itemprop="discussionUrl">
-      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2267786039/" itemprop="commentCount"></span>
+    <a title="disqus" href="/2332552694/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2332552694/" itemprop="commentCount"></span>
     </a>
   </span>
   
@@ -259,225 +278,7 @@
                 <i class="fa fa-file-word-o"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>3.4k</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-clock-o"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>3 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>本文将介绍 Landing Zone Initiation Stack 的部署, 参数解析以及一些容易出错的地方</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2267786039/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/4237658498/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="L. Yuan">
-      <meta itemprop="description" content>
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Lin's Notes">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/4237658498/" class="post-title-link" itemprop="url">实施 AWS Landing Zone 2: 实施前场景与目标规划</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-03-12 23:33:52" itemprop="dateCreated datePublished" datetime="2020-03-12T23:33:52+08:00">2020-03-12</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-07-11 01:45:22" itemprop="dateModified" datetime="2020-07-11T01:45:22+08:00">2020-07-11</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/uncategorized/" itemprop="url" rel="index"><span itemprop="name">uncategorized</span></a>
-                </span>
-            </span>
-
-          
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="fa fa-comment-o"></i>
-      </span>
-      <span class="post-meta-item-text">Disqus：</span>
-    
-    <a title="disqus" href="/4237658498/#disqus_thread" itemprop="discussionUrl">
-      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="4237658498/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-file-word-o"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>1.6k</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-clock-o"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>1 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>该系列文章将通过一个虚拟场景介绍如何在现存的多账户环境下实施 Landing Zone (brownfield deployment). 本文介绍实施前企业多账户环境的现状, 迁移的目标规划和准备工作</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/4237658498/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-        
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block home" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/2804254/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="L. Yuan">
-      <meta itemprop="description" content>
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Lin's Notes">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2804254/" class="post-title-link" itemprop="url">实施 AWS Landing Zone 1: 背景及架构介绍</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2020-03-08 22:37:50" itemprop="dateCreated datePublished" datetime="2020-03-08T22:37:50+08:00">2020-03-08</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-07-11 01:45:22" itemprop="dateModified" datetime="2020-07-11T01:45:22+08:00">2020-07-11</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/uncategorized/" itemprop="url" rel="index"><span itemprop="name">uncategorized</span></a>
-                </span>
-            </span>
-
-          
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="fa fa-comment-o"></i>
-      </span>
-      <span class="post-meta-item-text">Disqus：</span>
-    
-    <a title="disqus" href="/2804254/#disqus_thread" itemprop="discussionUrl">
-      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2804254/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-file-word-o"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>1.8k</span>
+              <span>2k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
@@ -496,24 +297,71 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <p>本文介绍了 AWS 多账号管理的需求, Landing Zone 方案的背景及基本结构, Landing Zone 方案和 Control Tower 的对比与选择</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2804254/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
+        <p>本文简单配置一下 ingress router, 解决默认设置的一些问题</p>
+<ul>
+<li>固定 router pod 的放置节点: 默认没有 placement 规则, ingress router pod 可以跑在任意 worker 节点上, 给外部负载均衡器的配置带来麻烦</li>
+<li>替换默认证书为私有 CA 签发证书, 避免内网访问时提示证书不受信任的警告</li>
+</ul>
+<a id="more"></a>
+<h2 id="ingress-router-placement">Ingress Router Placement</h2>
+<p>我这个环境里只有三个 worker 节点, 配置外部负载均衡器访问 ingress 暴露的应用时也就是用这三个节点作为后端 server pool. 但是实际情况中可能有很多 worker 节点, 因此需要对 ingress router pod 的放置策略加以限制, 便于配置外部负载均衡器.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看 IngressController 的 API spec. 可以看到放置策略支持 nodeSelector 模式</span></span><br><span class="line">oc explain ingresscontroller.spec.nodePlacement --api-version=operator.openshift.io/v1</span><br><span class="line"></span><br><span class="line"><span class="comment"># 给目标 worker 打标签, 标记其角色为 infra</span></span><br><span class="line">oc label node ocp-node-3.int.vopsdev.com node-role.kubernetes.io/worker=infra --overwrite</span><br><span class="line">oc label node ocp-node-4.int.vopsdev.com node-role.kubernetes.io/worker=infra --overwrite</span><br><span class="line">oc label node ocp-node-5.int.vopsdev.com node-role.kubernetes.io/worker=infra --overwrite</span><br><span class="line"></span><br><span class="line"><span class="comment"># 给 ingresscontroller 设置放置策略</span></span><br><span class="line">oc patch ingresscontroller default --<span class="built_in">type</span>=merge -p <span class="string">'&#123;"spec":&#123;"nodePlacement":&#123;"nodeSelector":&#123;"matchLabels":&#123;"node-role.kubernetes.io/worker":"infra"&#125;&#125;&#125;&#125;&#125;'</span> -n openshift-ingress-operator</span><br><span class="line"></span><br><span class="line"><span class="comment"># router pod 进行了重建, 并且调度到目标节点上</span></span><br><span class="line">oc get pod -n openshift-ingress -o wide</span><br></pre></td></tr></table></figure>
+<h2 id="替换-ingress-默认证书">替换 ingress 默认证书</h2>
+<p>使用私有 PKI 的二级 CA (issuing CA) 签发一个 wildcard 证书作为 ingress 默认证书, 包含下面名字</p>
+<ul>
+<li>ocp.vopsdev.com</li>
+<li>*.ocp.vopsdev.com</li>
+<li>*.apps.ocp.vopsdev.com</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 让 haproxy router 信任私有根 CA</span></span><br><span class="line">oc create configmap vopsdev-root-ca --from-file=ca-bundle.crt=/etc/pki/ca-trust/<span class="built_in">source</span>/anchors/vopsdev-root-ca-g1.crt -n openshift-config</span><br><span class="line">oc patch proxy/cluster --<span class="built_in">type</span>=merge --patch=<span class="string">'&#123;"spec":&#123;"trustedCA":&#123;"name":"vopsdev-root-ca"&#125;&#125;&#125;'</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 这里的证书使用证书链形式, 包含服务器证书 + 二级 CA 证书</span></span><br><span class="line"><span class="comment"># 由于内网机器都已经信任了根 CA, 结合这里的服务器证书链可以构成完整的 TLS 验证路径</span></span><br><span class="line">oc create secret tls wildcard-ocp-tls --cert=private.wildcard.vopsdev.com.chained.crt --key=private.wildcard.vopsdev.com.key -n openshift-ingress</span><br><span class="line">oc patch ingresscontroller default --<span class="built_in">type</span>=merge -p <span class="string">'&#123;"spec":&#123;"defaultCertificate":&#123;"name":"wildcard-ocp-tls"&#125;&#125;&#125;'</span> -n openshift-ingress-operator</span><br></pre></td></tr></table></figure>
+<p>等待 router pod 重建完成后, 测试登录 web console, 可以发现证书替换已经生效 <img src="ingress-default-certificate.png"></p>
+<p>对于内网环境, 这种 wildcard 形式的默认证书基本够用. 签发一个时效足够长的证书后也不用操心续期的问题. 但是如果想把应用发布到公网上, 还是得需要公网 CA 签发的证书. 目前用的比较多的是 Let's Encrypt, 此时可以结合 Openshift ACME Controller 实现为 ingress 资源自动申请 Let's Encrypt 证书并自动续期.</p>
+
     </div>
 
     
     
     
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>L. Yuan
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://notes.yuanlinios.me/2332552694/" title="离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress">https://notes.yuanlinios.me/2332552694/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="external nofollow noopener noreferrer" target="_blank"><i class="fa fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
       <footer class="post-footer">
-        <div class="post-eof"></div>
+          <div class="post-tags">
+              <a href="/tags/RedHat/" rel="tag"># RedHat</a>
+              <a href="/tags/Openshift/" rel="tag"># Openshift</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2056397848/" rel="prev" title="离线部署 Openshift Container Platform 4.3 - 3: 配置本地 ImageStream 和 OperatorHub">
+      <i class="fa fa-chevron-left"></i> 离线部署 Openshift Container Platform 4.3 - 3: 配置本地 ImageStream 和 OperatorHub
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/1074344158/" rel="next" title="离线部署 Openshift Container Platform 4.3 - 5: 配置 registry 使用持久存储">
+      离线部署 Openshift Container Platform 4.3 - 5: 配置 registry 使用持久存储 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
       </footer>
+    
   </article>
   
   
@@ -521,15 +369,16 @@
 
   </div>
 
-  
-  <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span>
-  </nav>
-
-
 
           </div>
           
+    
+  <div class="comments">
+    <div id="disqus_thread">
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+    </div>
+  </div>
+  
 
 <script>
   window.addEventListener('tabs:register', () => {
@@ -576,6 +425,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#ingress-router-placement"><span class="nav-number">1.</span> <span class="nav-text">Ingress Router Placement</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#替换-ingress-默认证书"><span class="nav-number">2.</span> <span class="nav-text">替换 ingress 默认证书</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -742,6 +592,26 @@
   }
   // defer loading until the whole page loading is completed
   window.addEventListener('load', loadCount, false);
+</script>
+<script>
+  var disqus_config = function() {
+    this.page.url = "https://notes.yuanlinios.me/2332552694/";
+    this.page.identifier = "2332552694/";
+    this.page.title = "离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress";
+    };
+  NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
+    if (window.DISQUS) {
+      DISQUS.reset({
+        reload: true,
+        config: disqus_config
+      });
+    } else {
+      var d = document, s = d.createElement('script');
+      s.src = 'https://yuanlinios-notes.disqus.com/embed.js';
+      s.setAttribute('data-timestamp', '' + +new Date());
+      (d.head || d.body).appendChild(s);
+    }
+  });
 </script>
 
 </body>

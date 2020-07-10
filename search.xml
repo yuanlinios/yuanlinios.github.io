@@ -2,7 +2,7 @@
 <search>
   <entry>
     <title>使用 Hashicorp Vault 保存 Ansible 的敏感信息</title>
-    <url>/2020-07-06/%E4%BD%BF%E7%94%A8-Hashicorp-Vault-%E4%BF%9D%E5%AD%98-Ansible-%E7%9A%84%E6%95%8F%E6%84%9F%E4%BF%A1%E6%81%AF/</url>
+    <url>/4090725925/</url>
     <content><![CDATA[<p>对于敏感信息 (密码/私钥之类), Ansible 提供了 ansible-vault 工具将其加密保存. 运行 playbook 时, 通过输入密码或者读取密码文件来解密, 算是一个简单有效的方案. Hashicorp Vault 则是一个有名的私密信息管理工具. 如果公司已经开始使用 vault, 当然希望能够集中管理各种私密信息, 而不是各个工具各自为战. 这里简单介绍如何使用 vault 的 KV 密文引擎保存敏感信息, 供 ansible-playbook 使用. <a id="more"></a></p>
 <h2 id="准备">准备</h2>
 <p>通过 ansible 提供的 lookup 类型插件 hashi_vault 可以读取保存在 vault 的 KV 引擎中的数据 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">ansible-doc -t lookup hashi_vault</span><br></pre></td></tr></table></figure> 通过 <code>pip install hvac</code> 来安装 hashi_vault 插件.</p>
@@ -25,8 +25,7 @@
 <p>Playbook: <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">---</span><br><span class="line">- name: deploy certificate and private key to all reverse proxies</span><br><span class="line">  hosts:</span><br><span class="line">  - rproxy</span><br><span class="line">  serial: 1</span><br><span class="line">  vars:</span><br><span class="line">    vault_param: &quot;url&#x3D;https:&#x2F;&#x2F;vault.svc.vopsdev.com:8200 ca_cert&#x3D;&#x2F;etc&#x2F;pki&#x2F;ca-trust&#x2F;source&#x2F;anchors&#x2F;private-trusted-bundle.pem&quot;</span><br><span class="line">    cert_param: &quot;secret&#x3D;secret&#x2F;data&#x2F;dc1&#x2F;rproxy&#x2F;certificate:data &#123;&#123; vault_param &#125;&#125;&quot;</span><br><span class="line">    key_param: &quot;secret&#x3D;secret&#x2F;data&#x2F;dc1&#x2F;rproxy&#x2F;privatekey:data &#123;&#123; vault_param &#125;&#125;&quot;</span><br><span class="line"></span><br><span class="line">  roles:</span><br><span class="line">  - role: deploy_certificate</span><br><span class="line">    vars:</span><br><span class="line">      certificate_content: &quot;&#123;&#123; lookup(&#39;hashi_vault&#39;, cert_param)[&#39;value&#39;] &#125;&#125;&quot;</span><br><span class="line">      key_content: &quot;&#123;&#123; lookup(&#39;hashi_vault&#39;, key_param)[&#39;value&#39;] &#125;&#125;&quot;</span><br></pre></td></tr></table></figure> 这里使用 <code>serial: 1</code> 来控制并行度, 确保一台主机上证书更新完成, 服务重新加载配置后再执行下一台 host.</p>
 ]]></content>
       <categories>
-        <category>Automation</category>
-        <category>Ansible</category>
+        <category>uncategorized</category>
       </categories>
       <tags>
         <tag>ansible</tag>
@@ -36,7 +35,7 @@
   </entry>
   <entry>
     <title>使用 tlog 在 CentOS 7 上实施 ssh 会话记录</title>
-    <url>/2020-05-29/%E4%BD%BF%E7%94%A8-tlog-%E5%9C%A8-CentOS-7-%E4%B8%8A%E5%AE%9E%E6%96%BD-ssh-%E4%BC%9A%E8%AF%9D%E8%AE%B0%E5%BD%95/</url>
+    <url>/913795803/</url>
     <content><![CDATA[<p>Native Session Recording 是 RHEL 8 / CentOS 8 引入的新功能, 可以方便的录制用户会话用以审计. 按照<a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/recording_sessions/index" target="_blank" rel="external nofollow noopener noreferrer">官方文档</a>的步骤, 在 RHEL 8 或者 CentOS 8 上配置非常容易. 由于目前我的大部分服务器还是跑在 CentOS 7 上, 很自然的想能否将这套方案在 CentOS 7 上部署出来. 原本以为很容易, 实际做下来才发现坑不少. 这里做一个简要的记录 <a id="more"></a></p>
 <h2 id="tlog-会话记录的组件和原理">tlog 会话记录的组件和原理</h2>
 <p>之前也有不少开源工具可以提供 ssh 会话录制的功能, 比如 script + scriptreplay. 不过也就是玩具的水平, 要真正生产可用还需要大量的 DIY 脚本来辅助. 而 tlog 算是一个相对比较成熟的开源方案了: 使用简便, 搭配 cockpit 可以方便的管理会话记录, 针对重放也提供了丰富的控制.</p>
@@ -88,8 +87,7 @@
 <p>将 /tmp/mysession.journal 复制到到目标服务器, 需要放到 /var/log/journal 下. 在目标服务器上实现重放只需要安装 tlog <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">yum localinstall -y tlog-8-2.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">mkdir -p /var/<span class="built_in">log</span>/journal</span><br><span class="line">mv /tmp/mysession.journal /var/<span class="built_in">log</span>/journal/</span><br><span class="line"></span><br><span class="line">REC_ID=2f84bc33bce0486394706de9be91e72e-965-a3cc</span><br><span class="line">tlog-play -r journal --file-path=mysession.journal -M TLOG_REC=<span class="variable">$REC_ID</span></span><br></pre></td></tr></table></figure> <img src="alice-session-remote-replay.png"></p>
 ]]></content>
       <categories>
-        <category>CentOS</category>
-        <category>Administration</category>
+        <category>uncategorized</category>
       </categories>
       <tags>
         <tag>Linux</tag>
@@ -98,7 +96,7 @@
   </entry>
   <entry>
     <title>定制 Openshift 3.11 监控系统 Cluster Monitoring Operator</title>
-    <url>/2020-05-07/%E5%AE%9A%E5%88%B6-Openshift-3-11-%E7%9B%91%E6%8E%A7%E7%B3%BB%E7%BB%9F-Cluster-Monitoring-Operator/</url>
+    <url>/1412485228/</url>
     <content><![CDATA[<p>本文介绍如何对 Openshift (OCP/OKD) 3.11 的监控系统 cluster monitoring operator 进行简单定制, 扩展平台监控的范围. <a id="more"></a></p>
 <h2 id="cluster-monitoring-operator-介绍">Cluster Monitoring Operator 介绍</h2>
 <p>Openshift 3.11 以及后续的 4.x 平台都使用预定义配置的 cluster monitoring operator 来做平台监控. Cluster monitoring operator 管理 prometheus operator, grafana, kube-state-metrics 和 node-exporter. 而 prometheus operator 再负责管理 prometheus 和 alertmanager. 各组件之间的关系如下图所示:</p>
@@ -201,8 +199,7 @@
 </ol>
 ]]></content>
       <categories>
-        <category>RedHat</category>
-        <category>Openshift</category>
+        <category>uncategorized</category>
       </categories>
       <tags>
         <tag>RedHat</tag>
@@ -211,7 +208,7 @@
   </entry>
   <entry>
     <title>离线部署 Openshift Container Platform 4.3 - 6: 配置持久存储</title>
-    <url>/2020-03-21/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-6-%E9%85%8D%E7%BD%AE%E6%8C%81%E4%B9%85%E5%AD%98%E5%82%A8/</url>
+    <url>/1571144678/</url>
     <content><![CDATA[<p>本文为 OCP 平台配置动态持久存储, 使用 vSphere Volume 和 Ceph RBD CSI <a id="more"></a></p>
 <h2 id="vsphere-volume">vSphere Volume</h2>
 <p>如果前面配置都正确, vSphere Volume 此时已经可用. 目前系统里应该只有一种 storageclass: thin(default), 其 provisioner 为 kubernetes.io/vsphere-volume. 建一个 pod 测试一下 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 查看现有的 storageclass</span></span><br><span class="line">oc get sc</span><br><span class="line">NAME             PROVISIONER                    AGE</span><br><span class="line">thin (default)   kubernetes.io/vsphere-volume   2d19h</span><br><span class="line"></span><br><span class="line">oc project sandbox-1</span><br><span class="line"><span class="comment"># 我这里用的是私有仓库里的离线镜像</span></span><br><span class="line">oc apply -f - &lt;&lt;EOF</span><br><span class="line">---</span><br><span class="line">apiVersion: v1</span><br><span class="line">kind: Pod</span><br><span class="line">metadata:</span><br><span class="line">  name: vsphere-volume-demo-pod</span><br><span class="line">spec:</span><br><span class="line">  containers:</span><br><span class="line">    - name: web-server</span><br><span class="line">      image: quay.svc.vopsdev.com/devinfra/nginx:latest</span><br><span class="line">      volumeMounts:</span><br><span class="line">        - name: www-data</span><br><span class="line">          mountPath: /var/lib/www/html</span><br><span class="line">  volumes:</span><br><span class="line">    - name: www-data</span><br><span class="line">      persistentVolumeClaim:</span><br><span class="line">        claimName: vsphere-demo-pvc</span><br><span class="line">        readOnly: <span class="literal">false</span></span><br><span class="line">---</span><br><span class="line">apiVersion: v1</span><br><span class="line">kind: PersistentVolumeClaim</span><br><span class="line">metadata:</span><br><span class="line">  name: vsphere-demo-pvc</span><br><span class="line">spec:</span><br><span class="line">  accessModes:</span><br><span class="line">    - ReadWriteOnce</span><br><span class="line">  volumeMode: Filesystem</span><br><span class="line">  resources:</span><br><span class="line">    requests:</span><br><span class="line">      storage: 1Gi</span><br><span class="line">  storageClassName: thin</span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line"><span class="comment"># 检查一下结果是否正常</span></span><br><span class="line">oc get pod,pvc</span><br><span class="line">NAME                          READY   STATUS    RESTARTS   AGE</span><br><span class="line">pod/vsphere-volume-demo-pod   1/1     Running   0          20s</span><br><span class="line"></span><br><span class="line">NAME                                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE</span><br><span class="line">persistentvolumeclaim/vsphere-demo-pvc   Bound    pvc-ae6dbae7-bb1f-460c-87d8-79ccbc01173d   1Gi        RWO            thin           20s</span><br></pre></td></tr></table></figure></p>
@@ -239,8 +236,7 @@
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">oc project sandbox-1</span><br><span class="line"></span><br><span class="line">oc apply -f - &lt;&lt;EOF</span><br><span class="line">---</span><br><span class="line">apiVersion: v1</span><br><span class="line">kind: Pod</span><br><span class="line">metadata:</span><br><span class="line">  name: csi-rbd-demo-pod</span><br><span class="line">spec:</span><br><span class="line">  containers:</span><br><span class="line">    - name: web-server</span><br><span class="line">      image: quay.svc.vopsdev.com&#x2F;devinfra&#x2F;nginx:latest</span><br><span class="line">      volumeMounts:</span><br><span class="line">        - name: www-data</span><br><span class="line">          mountPath: &#x2F;var&#x2F;lib&#x2F;www&#x2F;html</span><br><span class="line">  volumes:</span><br><span class="line">    - name: www-data</span><br><span class="line">      persistentVolumeClaim:</span><br><span class="line">        claimName: rbd-pvc</span><br><span class="line">        readOnly: false</span><br><span class="line">---</span><br><span class="line">apiVersion: v1</span><br><span class="line">kind: PersistentVolumeClaim</span><br><span class="line">metadata:</span><br><span class="line">  name: rbd-pvc</span><br><span class="line">spec:</span><br><span class="line">  accessModes:</span><br><span class="line">    - ReadWriteOnce</span><br><span class="line">  volumeMode: Filesystem</span><br><span class="line">  resources:</span><br><span class="line">    requests:</span><br><span class="line">      storage: 1Gi</span><br><span class="line">  storageClassName: csi-rbd-sc</span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line">oc get pod,pvc</span><br><span class="line">NAME                   READY   STATUS    RESTARTS   AGE</span><br><span class="line">pod&#x2F;csi-rbd-demo-pod   1&#x2F;1     Running   0          43s</span><br><span class="line"></span><br><span class="line">NAME                            STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE</span><br><span class="line">persistentvolumeclaim&#x2F;rbd-pvc   Bound    pvc-57efa24d-acc8-40f5-bb0c-18b77f0d5ec6   1Gi        RWO            csi-rbd-sc     43s</span><br></pre></td></tr></table></figure>
 ]]></content>
       <categories>
-        <category>RedHat</category>
-        <category>Openshift</category>
+        <category>uncategorized</category>
       </categories>
       <tags>
         <tag>RedHat</tag>
@@ -249,7 +245,7 @@
   </entry>
   <entry>
     <title>离线部署 Openshift Container Platform 4.3 - 5: 配置 registry 使用持久存储</title>
-    <url>/2020-03-20/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-5-%E9%85%8D%E7%BD%AE-registry-%E4%BD%BF%E7%94%A8%E6%8C%81%E4%B9%85%E5%AD%98%E5%82%A8/</url>
+    <url>/1074344158/</url>
     <content><![CDATA[<p>默认安装完成时 OCP 集成的镜像仓库没有配置持久存储, registry pod 会被自动清理, 管理状态为 Removed. 本文将为 OCP 集成镜像仓库配置持久存储. 这里使用基于 minio 的对象存储</p>
 <a id="more"></a>
 <h2 id="关于-registry-持久存储">关于 registry 持久存储</h2>
@@ -281,8 +277,7 @@
 <p><img src="ocp-status-after-registry-setup.png"></p>
 ]]></content>
       <categories>
-        <category>RedHat</category>
-        <category>Openshift</category>
+        <category>uncategorized</category>
       </categories>
       <tags>
         <tag>RedHat</tag>
@@ -291,7 +286,7 @@
   </entry>
   <entry>
     <title>离线部署 Openshift Container Platform 4.3 - 4: 配置 ingress</title>
-    <url>/2020-03-19/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-4-%E9%85%8D%E7%BD%AE-ingress/</url>
+    <url>/2332552694/</url>
     <content><![CDATA[<p>本文简单配置一下 ingress router, 解决默认设置的一些问题</p>
 <ul>
 <li>固定 router pod 的放置节点: 默认没有 placement 规则, ingress router pod 可以跑在任意 worker 节点上, 给外部负载均衡器的配置带来麻烦</li>
@@ -313,8 +308,7 @@
 <p>对于内网环境, 这种 wildcard 形式的默认证书基本够用. 签发一个时效足够长的证书后也不用操心续期的问题. 但是如果想把应用发布到公网上, 还是得需要公网 CA 签发的证书. 目前用的比较多的是 Let's Encrypt, 此时可以结合 Openshift ACME Controller 实现为 ingress 资源自动申请 Let's Encrypt 证书并自动续期.</p>
 ]]></content>
       <categories>
-        <category>RedHat</category>
-        <category>Openshift</category>
+        <category>uncategorized</category>
       </categories>
       <tags>
         <tag>RedHat</tag>
@@ -323,7 +317,7 @@
   </entry>
   <entry>
     <title>离线部署 Openshift Container Platform 4.3 - 3: 配置本地 ImageStream 和 OperatorHub</title>
-    <url>/2020-03-18/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-3-%E9%85%8D%E7%BD%AE%E6%9C%AC%E5%9C%B0-ImageStream-%E5%92%8C-OperatorHub/</url>
+    <url>/2056397848/</url>
     <content><![CDATA[<p>本文将使用前面保存私有镜像库的离线资源替换默认的 ImageStream 和 OperatorHub</p>
 <a id="more"></a>
 <h2 id="替换-sample-images">替换 Sample Images</h2>
@@ -355,8 +349,7 @@
 <p><img src="ocp-operatorhub-customized.png"></p>
 ]]></content>
       <categories>
-        <category>RedHat</category>
-        <category>Openshift</category>
+        <category>uncategorized</category>
       </categories>
       <tags>
         <tag>RedHat</tag>
@@ -365,7 +358,7 @@
   </entry>
   <entry>
     <title>离线部署 Openshift Container Platform 4.3 - 2: 初始安装</title>
-    <url>/2020-03-16/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-2-%E5%88%9D%E5%A7%8B%E5%AE%89%E8%A3%85/</url>
+    <url>/1074891902/</url>
     <content><![CDATA[<p>本文记录了离线环境下以 UPI (User Provisioned Infrastructure) 模式初始安装 OCP 4.3.5 集群的步骤, 包括地址/DNS 名称规划, DHCP, 负载均衡配置, ignition 文件生成, 到最后的集群部署.</p>
 <p>IaaS 平台为 VMware vSphere 6.7U2. DDI 方案使用 Infoblox NIOS. 负载均衡方案使用 HAProxy</p>
 <a id="more"></a>
@@ -511,8 +504,7 @@
 <p>至此集群初步搭建完成, 后面将针对各个基础服务进行完善.</p>
 ]]></content>
       <categories>
-        <category>RedHat</category>
-        <category>Openshift</category>
+        <category>uncategorized</category>
       </categories>
       <tags>
         <tag>RedHat</tag>
@@ -521,7 +513,7 @@
   </entry>
   <entry>
     <title>实施 AWS Landing Zone 4: 定制 Landing Zone CodePipeline</title>
-    <url>/2020-03-16/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-4-%E5%AE%9A%E5%88%B6-Landing-Zone-CodePipeline/</url>
+    <url>/4024439897/</url>
     <content><![CDATA[<p>Landing Zone CodePipeline 默认使用一个启用了版本的 S3 bucket 作为代码来源: 当有新的配置文件 aws-landing-zone-configuration.zip 上传时, 触发 CodePipeline. 然而使用 versioned bucket 作为版本控制显然算不上最佳实践. 这里将修改 Landing Zone Codepipeline 使用 CodeCommit repo 作为代码来源. 这样就可以通过 git 来管理组织下所有 AWS 账号的配置基线.</p>
 <a id="more"></a>
 <p>进一步, 企业一般都有自己的代码管理平台 (bitbucket/gitlab/github), 并不见得愿意单单为了管理 Landing Zone 的配置而引入额外的 CodeCommit 代码仓库的维护成本. 实际上可以利用现有代码平台来保存 Landing Zone 配置, 其基本原理是做仓库镜像: 利用 CI 工具将特定分支的更新自动推送到 CodeCommit, 进而触发 CodePipeline.</p>
@@ -558,8 +550,7 @@
 </ul>
 ]]></content>
       <categories>
-        <category>AWS</category>
-        <category>Landing Zone</category>
+        <category>uncategorized</category>
       </categories>
       <tags>
         <tag>AWS</tag>
@@ -568,7 +559,7 @@
   </entry>
   <entry>
     <title>离线部署 Openshift Container Platform 4.3 - 1: 准备离线资源</title>
-    <url>/2020-03-15/%E7%A6%BB%E7%BA%BF%E9%83%A8%E7%BD%B2-Openshift-Container-Platform-4-3-1-%E5%87%86%E5%A4%87%E7%A6%BB%E7%BA%BF%E8%B5%84%E6%BA%90/</url>
+    <url>/43606303/</url>
     <content><![CDATA[<p>本系列文章记录了 Openshift Container Platform (OCP) 4.3.5 离线部署的过程. 离线资源包括安装镜像, 所有样例 Image Stream, OperatorHub 下的 RedHat Operators. 虽然这是一个实验系列, 我会尽可能的按照生产实践来进行. <a id="more"></a></p>
 <h2 id="实验环境">实验环境</h2>
 <h3 id="跳板机">跳板机</h3>
@@ -613,8 +604,7 @@
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">cat redhat-operators-manifests/mapping.txt | <span class="keyword">while</span> <span class="built_in">read</span> line; <span class="keyword">do</span></span><br><span class="line">  origin=$(<span class="built_in">echo</span> <span class="variable">$line</span> | cut -d= -f1)</span><br><span class="line">  target=$(<span class="built_in">echo</span> <span class="variable">$line</span> | cut -d= -f2)</span><br><span class="line">  <span class="keyword">if</span> [[ <span class="string">"<span class="variable">$origin</span>"</span> =~ <span class="string">"sha256"</span> ]]; <span class="keyword">then</span></span><br><span class="line">    tag=$(<span class="built_in">echo</span> <span class="variable">$origin</span> | cut -d: -f2 | cut -c -8)</span><br><span class="line">    skopeo copy --all docker://<span class="variable">$origin</span> docker://<span class="variable">$target</span>:<span class="variable">$tag</span></span><br><span class="line">  <span class="keyword">else</span></span><br><span class="line">    skopeo copy --all docker://<span class="variable">$origin</span> docker://<span class="variable">$target</span></span><br><span class="line">  <span class="keyword">fi</span></span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
 ]]></content>
       <categories>
-        <category>RedHat</category>
-        <category>Openshift</category>
+        <category>uncategorized</category>
       </categories>
       <tags>
         <tag>RedHat</tag>
@@ -623,7 +613,7 @@
   </entry>
   <entry>
     <title>实施 AWS Landing Zone 3: 部署 Initiation Stack</title>
-    <url>/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-3-%E9%83%A8%E7%BD%B2-Initiation-Stack/</url>
+    <url>/2267786039/</url>
     <content><![CDATA[<p>本文将介绍 Landing Zone Initiation Stack 的部署, 参数解析以及一些容易出错的地方</p>
 <a id="more"></a>
 <h2 id="创建-initiation-stack">创建 Initiation Stack</h2>
@@ -688,8 +678,7 @@
 <p>而 Lambda 函数 LandingZoneDeploymentLambda 的 config_deployer.py 中会检查 email_list 中是否有重复地址 <figure class="highlight python"><table><tr><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">unique_email_validator</span><span class="params">(email_list)</span>:</span></span><br><span class="line">    result = set([x <span class="keyword">for</span> x <span class="keyword">in</span> email_list <span class="keyword">if</span> email_list.count(x) &gt; <span class="number">1</span>])</span><br><span class="line">    duplicate_list = list(result)</span><br><span class="line">    logger.info(<span class="string">"Duplicate Emails: &#123;&#125;"</span>.format(duplicate_list))</span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">not</span> duplicate_list:</span><br><span class="line">        logger.info(<span class="string">"Duplicate emails not found"</span>)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="keyword">raise</span> Exception(<span class="string">"Found duplicate email(s) &#123;&#125; in the parameters."</span>.format(duplicate_list))</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">config_deployer</span><span class="params">(event)</span>:</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        s3 = S3(logger)</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment"># Check if the emails are Unique</span></span><br><span class="line">    unique_email_validator(event.get(<span class="string">'email_list'</span>))</span><br></pre></td></tr></table></figure></p>
 ]]></content>
       <categories>
-        <category>AWS</category>
-        <category>Landing Zone</category>
+        <category>uncategorized</category>
       </categories>
       <tags>
         <tag>AWS</tag>
@@ -698,7 +687,7 @@
   </entry>
   <entry>
     <title>实施 AWS Landing Zone 2: 实施前场景与目标规划</title>
-    <url>/2020-03-12/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-2-%E5%AE%9E%E6%96%BD%E5%89%8D%E5%9C%BA%E6%99%AF%E4%B8%8E%E7%9B%AE%E6%A0%87%E8%A7%84%E5%88%92/</url>
+    <url>/4237658498/</url>
     <content><![CDATA[<p>该系列文章将通过一个虚拟场景介绍如何在现存的多账户环境下实施 Landing Zone (brownfield deployment). 本文介绍实施前企业多账户环境的现状, 迁移的目标规划和准备工作</p>
 <a id="more"></a>
 <h2 id="实施前状况">实施前状况</h2>
@@ -716,8 +705,7 @@
 <p>对于一个新创建的账号, 其 AWS Organization 下默认只能加入很少几个账号 (2个?) 无法满足 Landing Zone 的要求. 如果你想从头开始实施, 请确保提升组织账号的 AWS Organization Account Limit (需要通过给 AWS support 提交 ticket)</p>
 ]]></content>
       <categories>
-        <category>AWS</category>
-        <category>Landing Zone</category>
+        <category>uncategorized</category>
       </categories>
       <tags>
         <tag>AWS</tag>
@@ -726,7 +714,7 @@
   </entry>
   <entry>
     <title>实施 AWS Landing Zone 1: 背景及架构介绍</title>
-    <url>/2020-03-08/%E5%AE%9E%E6%96%BD-AWS-Landing-Zone-1-%E8%83%8C%E6%99%AF%E5%8F%8A%E6%9E%B6%E6%9E%84%E4%BB%8B%E7%BB%8D/</url>
+    <url>/2804254/</url>
     <content><![CDATA[<p>本文介绍了 AWS 多账号管理的需求, Landing Zone 方案的背景及基本结构, Landing Zone 方案和 Control Tower 的对比与选择</p>
 <a id="more"></a>
 <h2 id="多账户的需求和面临的挑战">多账户的需求和面临的挑战</h2>
@@ -770,8 +758,7 @@
           </div>
 ]]></content>
       <categories>
-        <category>AWS</category>
-        <category>Landing Zone</category>
+        <category>uncategorized</category>
       </categories>
       <tags>
         <tag>AWS</tag>
