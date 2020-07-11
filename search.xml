@@ -25,7 +25,8 @@
 <p>Playbook: <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">---</span><br><span class="line">- name: deploy certificate and private key to all reverse proxies</span><br><span class="line">  hosts:</span><br><span class="line">  - rproxy</span><br><span class="line">  serial: 1</span><br><span class="line">  vars:</span><br><span class="line">    vault_param: &quot;url&#x3D;https:&#x2F;&#x2F;vault.svc.vopsdev.com:8200 ca_cert&#x3D;&#x2F;etc&#x2F;pki&#x2F;ca-trust&#x2F;source&#x2F;anchors&#x2F;private-trusted-bundle.pem&quot;</span><br><span class="line">    cert_param: &quot;secret&#x3D;secret&#x2F;data&#x2F;dc1&#x2F;rproxy&#x2F;certificate:data &#123;&#123; vault_param &#125;&#125;&quot;</span><br><span class="line">    key_param: &quot;secret&#x3D;secret&#x2F;data&#x2F;dc1&#x2F;rproxy&#x2F;privatekey:data &#123;&#123; vault_param &#125;&#125;&quot;</span><br><span class="line"></span><br><span class="line">  roles:</span><br><span class="line">  - role: deploy_certificate</span><br><span class="line">    vars:</span><br><span class="line">      certificate_content: &quot;&#123;&#123; lookup(&#39;hashi_vault&#39;, cert_param)[&#39;value&#39;] &#125;&#125;&quot;</span><br><span class="line">      key_content: &quot;&#123;&#123; lookup(&#39;hashi_vault&#39;, key_param)[&#39;value&#39;] &#125;&#125;&quot;</span><br></pre></td></tr></table></figure> 这里使用 <code>serial: 1</code> 来控制并行度, 确保一台主机上证书更新完成, 服务重新加载配置后再执行下一台 host.</p>
 ]]></content>
       <categories>
-        <category>uncategorized</category>
+        <category>Automation</category>
+        <category>Ansible</category>
       </categories>
       <tags>
         <tag>ansible</tag>
@@ -87,7 +88,8 @@
 <p>将 /tmp/mysession.journal 复制到到目标服务器, 需要放到 /var/log/journal 下. 在目标服务器上实现重放只需要安装 tlog <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">yum localinstall -y tlog-8-2.el7.x86_64.rpm</span><br><span class="line"></span><br><span class="line">mkdir -p /var/<span class="built_in">log</span>/journal</span><br><span class="line">mv /tmp/mysession.journal /var/<span class="built_in">log</span>/journal/</span><br><span class="line"></span><br><span class="line">REC_ID=2f84bc33bce0486394706de9be91e72e-965-a3cc</span><br><span class="line">tlog-play -r journal --file-path=mysession.journal -M TLOG_REC=<span class="variable">$REC_ID</span></span><br></pre></td></tr></table></figure> <img src="alice-session-remote-replay.png"></p>
 ]]></content>
       <categories>
-        <category>uncategorized</category>
+        <category>CentOS</category>
+        <category>Administration</category>
       </categories>
       <tags>
         <tag>Linux</tag>
@@ -199,7 +201,8 @@
 </ol>
 ]]></content>
       <categories>
-        <category>uncategorized</category>
+        <category>RedHat</category>
+        <category>Openshift</category>
       </categories>
       <tags>
         <tag>RedHat</tag>
@@ -236,7 +239,8 @@
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">oc project sandbox-1</span><br><span class="line"></span><br><span class="line">oc apply -f - &lt;&lt;EOF</span><br><span class="line">---</span><br><span class="line">apiVersion: v1</span><br><span class="line">kind: Pod</span><br><span class="line">metadata:</span><br><span class="line">  name: csi-rbd-demo-pod</span><br><span class="line">spec:</span><br><span class="line">  containers:</span><br><span class="line">    - name: web-server</span><br><span class="line">      image: quay.svc.vopsdev.com&#x2F;devinfra&#x2F;nginx:latest</span><br><span class="line">      volumeMounts:</span><br><span class="line">        - name: www-data</span><br><span class="line">          mountPath: &#x2F;var&#x2F;lib&#x2F;www&#x2F;html</span><br><span class="line">  volumes:</span><br><span class="line">    - name: www-data</span><br><span class="line">      persistentVolumeClaim:</span><br><span class="line">        claimName: rbd-pvc</span><br><span class="line">        readOnly: false</span><br><span class="line">---</span><br><span class="line">apiVersion: v1</span><br><span class="line">kind: PersistentVolumeClaim</span><br><span class="line">metadata:</span><br><span class="line">  name: rbd-pvc</span><br><span class="line">spec:</span><br><span class="line">  accessModes:</span><br><span class="line">    - ReadWriteOnce</span><br><span class="line">  volumeMode: Filesystem</span><br><span class="line">  resources:</span><br><span class="line">    requests:</span><br><span class="line">      storage: 1Gi</span><br><span class="line">  storageClassName: csi-rbd-sc</span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line">oc get pod,pvc</span><br><span class="line">NAME                   READY   STATUS    RESTARTS   AGE</span><br><span class="line">pod&#x2F;csi-rbd-demo-pod   1&#x2F;1     Running   0          43s</span><br><span class="line"></span><br><span class="line">NAME                            STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE</span><br><span class="line">persistentvolumeclaim&#x2F;rbd-pvc   Bound    pvc-57efa24d-acc8-40f5-bb0c-18b77f0d5ec6   1Gi        RWO            csi-rbd-sc     43s</span><br></pre></td></tr></table></figure>
 ]]></content>
       <categories>
-        <category>uncategorized</category>
+        <category>RedHat</category>
+        <category>Openshift</category>
       </categories>
       <tags>
         <tag>RedHat</tag>
@@ -277,7 +281,8 @@
 <p><img src="ocp-status-after-registry-setup.png"></p>
 ]]></content>
       <categories>
-        <category>uncategorized</category>
+        <category>RedHat</category>
+        <category>Openshift</category>
       </categories>
       <tags>
         <tag>RedHat</tag>
@@ -308,7 +313,8 @@
 <p>对于内网环境, 这种 wildcard 形式的默认证书基本够用. 签发一个时效足够长的证书后也不用操心续期的问题. 但是如果想把应用发布到公网上, 还是得需要公网 CA 签发的证书. 目前用的比较多的是 Let's Encrypt, 此时可以结合 Openshift ACME Controller 实现为 ingress 资源自动申请 Let's Encrypt 证书并自动续期.</p>
 ]]></content>
       <categories>
-        <category>uncategorized</category>
+        <category>RedHat</category>
+        <category>Openshift</category>
       </categories>
       <tags>
         <tag>RedHat</tag>
@@ -349,7 +355,8 @@
 <p><img src="ocp-operatorhub-customized.png"></p>
 ]]></content>
       <categories>
-        <category>uncategorized</category>
+        <category>RedHat</category>
+        <category>Openshift</category>
       </categories>
       <tags>
         <tag>RedHat</tag>
@@ -504,7 +511,8 @@
 <p>至此集群初步搭建完成, 后面将针对各个基础服务进行完善.</p>
 ]]></content>
       <categories>
-        <category>uncategorized</category>
+        <category>RedHat</category>
+        <category>Openshift</category>
       </categories>
       <tags>
         <tag>RedHat</tag>
@@ -550,7 +558,8 @@
 </ul>
 ]]></content>
       <categories>
-        <category>uncategorized</category>
+        <category>AWS</category>
+        <category>Landing Zone</category>
       </categories>
       <tags>
         <tag>AWS</tag>
@@ -604,7 +613,8 @@
 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">cat redhat-operators-manifests/mapping.txt | <span class="keyword">while</span> <span class="built_in">read</span> line; <span class="keyword">do</span></span><br><span class="line">  origin=$(<span class="built_in">echo</span> <span class="variable">$line</span> | cut -d= -f1)</span><br><span class="line">  target=$(<span class="built_in">echo</span> <span class="variable">$line</span> | cut -d= -f2)</span><br><span class="line">  <span class="keyword">if</span> [[ <span class="string">"<span class="variable">$origin</span>"</span> =~ <span class="string">"sha256"</span> ]]; <span class="keyword">then</span></span><br><span class="line">    tag=$(<span class="built_in">echo</span> <span class="variable">$origin</span> | cut -d: -f2 | cut -c -8)</span><br><span class="line">    skopeo copy --all docker://<span class="variable">$origin</span> docker://<span class="variable">$target</span>:<span class="variable">$tag</span></span><br><span class="line">  <span class="keyword">else</span></span><br><span class="line">    skopeo copy --all docker://<span class="variable">$origin</span> docker://<span class="variable">$target</span></span><br><span class="line">  <span class="keyword">fi</span></span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
 ]]></content>
       <categories>
-        <category>uncategorized</category>
+        <category>RedHat</category>
+        <category>Openshift</category>
       </categories>
       <tags>
         <tag>RedHat</tag>
@@ -678,7 +688,8 @@
 <p>而 Lambda 函数 LandingZoneDeploymentLambda 的 config_deployer.py 中会检查 email_list 中是否有重复地址 <figure class="highlight python"><table><tr><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">unique_email_validator</span><span class="params">(email_list)</span>:</span></span><br><span class="line">    result = set([x <span class="keyword">for</span> x <span class="keyword">in</span> email_list <span class="keyword">if</span> email_list.count(x) &gt; <span class="number">1</span>])</span><br><span class="line">    duplicate_list = list(result)</span><br><span class="line">    logger.info(<span class="string">"Duplicate Emails: &#123;&#125;"</span>.format(duplicate_list))</span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">not</span> duplicate_list:</span><br><span class="line">        logger.info(<span class="string">"Duplicate emails not found"</span>)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="keyword">raise</span> Exception(<span class="string">"Found duplicate email(s) &#123;&#125; in the parameters."</span>.format(duplicate_list))</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">config_deployer</span><span class="params">(event)</span>:</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        s3 = S3(logger)</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment"># Check if the emails are Unique</span></span><br><span class="line">    unique_email_validator(event.get(<span class="string">'email_list'</span>))</span><br></pre></td></tr></table></figure></p>
 ]]></content>
       <categories>
-        <category>uncategorized</category>
+        <category>AWS</category>
+        <category>Landing Zone</category>
       </categories>
       <tags>
         <tag>AWS</tag>
@@ -705,7 +716,8 @@
 <p>对于一个新创建的账号, 其 AWS Organization 下默认只能加入很少几个账号 (2个?) 无法满足 Landing Zone 的要求. 如果你想从头开始实施, 请确保提升组织账号的 AWS Organization Account Limit (需要通过给 AWS support 提交 ticket)</p>
 ]]></content>
       <categories>
-        <category>uncategorized</category>
+        <category>AWS</category>
+        <category>Landing Zone</category>
       </categories>
       <tags>
         <tag>AWS</tag>
@@ -758,7 +770,8 @@
           </div>
 ]]></content>
       <categories>
-        <category>uncategorized</category>
+        <category>AWS</category>
+        <category>Landing Zone</category>
       </categories>
       <tags>
         <tag>AWS</tag>
