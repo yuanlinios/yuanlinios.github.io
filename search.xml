@@ -279,34 +279,6 @@
       </tags>
   </entry>
   <entry>
-    <title>实施 AWS Landing Zone 2: 实施前场景与目标规划</title>
-    <url>/4237658498/</url>
-    <content><![CDATA[<p>该系列文章将通过一个虚拟场景介绍如何在现存的多账户环境下实施 Landing Zone (brownfield deployment). 本文介绍实施前企业多账户环境的现状, 迁移的目标规划和准备工作</p>
-<span id="more"></span>
-<h2 id="实施前状况">实施前状况</h2>
-<p>VOPSDEV.COM 目前在 AWS Organization 下按照部门职能和项目环境类型划分了多个组织单元 (Organization Unit, OU) 并采用了多个账号以实现职责/资源分离:</p>
-<p><img src="original-organization-structure.png" /></p>
-<p>业务的生产环境和测试环境账号分别在 production OU 和 staging OU 下, 开发人员的沙盒环境账号创建在 sandbox OU 下, 各个职能部门的账号创建在 department OU 下. Organization master, 安全, 审计日志, 公共服务相关账号在 core OU 下. 具体分布如下</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Root/</span><br><span class="line">  vopsdev/</span><br><span class="line">    production/</span><br><span class="line">      yl-production</span><br><span class="line">    staging/</span><br><span class="line">      yl-stagin</span><br><span class="line">    department/</span><br><span class="line">      yl-marketing</span><br><span class="line">      yl-hr</span><br><span class="line">      yl-network</span><br><span class="line">      yl-collaboration</span><br><span class="line">      yl-itdev</span><br><span class="line">      yl-itops</span><br><span class="line">    sandbox/</span><br><span class="line">      yl-sandbox-1</span><br><span class="line">      yl-sandbox-2</span><br><span class="line">    core/</span><br><span class="line">      yl-log-archive</span><br><span class="line">      yl-security</span><br><span class="line">      yl-shared-services</span><br><span class="line">      yl-master</span><br></pre></td></tr></table></figure>
-<p>各个账号可以自己独立的创建 VPC. 但是如果 VPC 需要接入公司 VPN, 则需要经过安全部门审批. 经批准后, 账号的 VPC 可以通过 transit gateway attachment 连接到网络部门账号 yl-network 下的 transit gateway 来访问内网资源. DNS, Active Directory 之类的公共服务已经在共享服务账号 yl-shared-services 下创建完成. SSO 在组织账号 yl-master 下配置完成, 使用 AD-Connector 连接到共享服务账号下的 Active Directory 作为身份认证源.</p>
-<p>这套环境目前面临的问题是: 由于缺少统一的配置管理方案, 各个账户初始化完成, 交付给用户使用后, 难以继续维持配置基线. 新的配置基线发布后又很难应用到现存的账户. 为此考虑在尽量重用现有服务的基础上实施 Landing Zone.</p>
-<h2 id="实施规划">实施规划</h2>
-<p>在组织根下创建一个新的 OU 分支, 后面会将 Landing Zone 应用到这个 OU 分支上 <img src="intermediate-organization-structure.png" /></p>
-<p>然后逐步将现有账号迁移到新的 OU 分支下, 由 Landing Zone Codepipeline 创建并维持基线资源. 而所有新的账号将通过 Landing Zone 的 Accounting Vending Machine 自动创建到新的 OU 分支下.</p>
-<p>所有账户迁移完成后即可删除旧的 OU 分支, 最终的账号分布如下 <figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Root/</span><br><span class="line">  vopsdev-landing-zone/</span><br><span class="line">    production/</span><br><span class="line">      yl-production</span><br><span class="line">    staging/</span><br><span class="line">      yl-stagin</span><br><span class="line">    department/</span><br><span class="line">      yl-marketing</span><br><span class="line">      yl-hr</span><br><span class="line">      yl-network</span><br><span class="line">      yl-collaboration</span><br><span class="line">      yl-itdev</span><br><span class="line">      yl-itops</span><br><span class="line">    sandbox/</span><br><span class="line">      yl-sandbox-1</span><br><span class="line">      yl-sandbox-2</span><br><span class="line">    core/</span><br><span class="line">      yl-log-archive</span><br><span class="line">      yl-security</span><br><span class="line">      yl-shared-services</span><br><span class="line">      yl-master</span><br></pre></td></tr></table></figure></p>
-<h2 id="资源限制">资源限制</h2>
-<p>对于一个新创建的账号, 其 AWS Organization 下默认只能加入很少几个账号 (2个?) 无法满足 Landing Zone 的要求. 如果你想从头开始实施, 请确保提升组织账号的 AWS Organization Account Limit (需要通过给 AWS support 提交 ticket)</p>
-]]></content>
-      <categories>
-        <category>AWS</category>
-        <category>Landing Zone</category>
-      </categories>
-      <tags>
-        <tag>AWS</tag>
-        <tag>Landing Zone</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>实施 AWS Landing Zone 1: 背景及架构介绍</title>
     <url>/2804254/</url>
     <content><![CDATA[<p>本文介绍了 AWS 多账号管理的需求, Landing Zone 方案的背景及基本结构, Landing Zone 方案和 Control Tower 的对比与选择</p>
@@ -349,6 +321,34 @@
 <p>举个例子, 默认 Landing Zone 会在所有账号和共享服务账号 (shared services account) 之间做 VPC peering 以便所有账户可以访问共享服务账号中的公共服务. 然而 VPC peering 本身有诸多限制, 企业环境下可能更多会选择 transit VPC 架构或者使用 transit gateway. 此时用户需要修改 Landing Zone 配置模板以匹配自身环境. 在系列的后续文章中我将逐一列示.</p>
 <div class="note warning"><p>AWS 声明 Landing Zone 必须由客户的 AWS account 团队或者经过认证的合作伙伴来部署, 以确保方案的实施成功. 如果你想自己实施, 请自行评估风险</p>
 </div>
+]]></content>
+      <categories>
+        <category>AWS</category>
+        <category>Landing Zone</category>
+      </categories>
+      <tags>
+        <tag>AWS</tag>
+        <tag>Landing Zone</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>实施 AWS Landing Zone 2: 实施前场景与目标规划</title>
+    <url>/4237658498/</url>
+    <content><![CDATA[<p>该系列文章将通过一个虚拟场景介绍如何在现存的多账户环境下实施 Landing Zone (brownfield deployment). 本文介绍实施前企业多账户环境的现状, 迁移的目标规划和准备工作</p>
+<span id="more"></span>
+<h2 id="实施前状况">实施前状况</h2>
+<p>VOPSDEV.COM 目前在 AWS Organization 下按照部门职能和项目环境类型划分了多个组织单元 (Organization Unit, OU) 并采用了多个账号以实现职责/资源分离:</p>
+<p><img src="original-organization-structure.png" /></p>
+<p>业务的生产环境和测试环境账号分别在 production OU 和 staging OU 下, 开发人员的沙盒环境账号创建在 sandbox OU 下, 各个职能部门的账号创建在 department OU 下. Organization master, 安全, 审计日志, 公共服务相关账号在 core OU 下. 具体分布如下</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Root/</span><br><span class="line">  vopsdev/</span><br><span class="line">    production/</span><br><span class="line">      yl-production</span><br><span class="line">    staging/</span><br><span class="line">      yl-stagin</span><br><span class="line">    department/</span><br><span class="line">      yl-marketing</span><br><span class="line">      yl-hr</span><br><span class="line">      yl-network</span><br><span class="line">      yl-collaboration</span><br><span class="line">      yl-itdev</span><br><span class="line">      yl-itops</span><br><span class="line">    sandbox/</span><br><span class="line">      yl-sandbox-1</span><br><span class="line">      yl-sandbox-2</span><br><span class="line">    core/</span><br><span class="line">      yl-log-archive</span><br><span class="line">      yl-security</span><br><span class="line">      yl-shared-services</span><br><span class="line">      yl-master</span><br></pre></td></tr></table></figure>
+<p>各个账号可以自己独立的创建 VPC. 但是如果 VPC 需要接入公司 VPN, 则需要经过安全部门审批. 经批准后, 账号的 VPC 可以通过 transit gateway attachment 连接到网络部门账号 yl-network 下的 transit gateway 来访问内网资源. DNS, Active Directory 之类的公共服务已经在共享服务账号 yl-shared-services 下创建完成. SSO 在组织账号 yl-master 下配置完成, 使用 AD-Connector 连接到共享服务账号下的 Active Directory 作为身份认证源.</p>
+<p>这套环境目前面临的问题是: 由于缺少统一的配置管理方案, 各个账户初始化完成, 交付给用户使用后, 难以继续维持配置基线. 新的配置基线发布后又很难应用到现存的账户. 为此考虑在尽量重用现有服务的基础上实施 Landing Zone.</p>
+<h2 id="实施规划">实施规划</h2>
+<p>在组织根下创建一个新的 OU 分支, 后面会将 Landing Zone 应用到这个 OU 分支上 <img src="intermediate-organization-structure.png" /></p>
+<p>然后逐步将现有账号迁移到新的 OU 分支下, 由 Landing Zone Codepipeline 创建并维持基线资源. 而所有新的账号将通过 Landing Zone 的 Accounting Vending Machine 自动创建到新的 OU 分支下.</p>
+<p>所有账户迁移完成后即可删除旧的 OU 分支, 最终的账号分布如下 <figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Root/</span><br><span class="line">  vopsdev-landing-zone/</span><br><span class="line">    production/</span><br><span class="line">      yl-production</span><br><span class="line">    staging/</span><br><span class="line">      yl-stagin</span><br><span class="line">    department/</span><br><span class="line">      yl-marketing</span><br><span class="line">      yl-hr</span><br><span class="line">      yl-network</span><br><span class="line">      yl-collaboration</span><br><span class="line">      yl-itdev</span><br><span class="line">      yl-itops</span><br><span class="line">    sandbox/</span><br><span class="line">      yl-sandbox-1</span><br><span class="line">      yl-sandbox-2</span><br><span class="line">    core/</span><br><span class="line">      yl-log-archive</span><br><span class="line">      yl-security</span><br><span class="line">      yl-shared-services</span><br><span class="line">      yl-master</span><br></pre></td></tr></table></figure></p>
+<h2 id="资源限制">资源限制</h2>
+<p>对于一个新创建的账号, 其 AWS Organization 下默认只能加入很少几个账号 (2个?) 无法满足 Landing Zone 的要求. 如果你想从头开始实施, 请确保提升组织账号的 AWS Organization Account Limit (需要通过给 AWS support 提交 ticket)</p>
 ]]></content>
       <categories>
         <category>AWS</category>
