@@ -300,14 +300,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>4.9k</span>
+      <span>5k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>4 分钟</span>
+      <span>5 分钟</span>
     </span>
 </div>
 
@@ -332,10 +332,11 @@
 <h2 id="使用-govc-部署-nsx-t-节点">使用 govc 部署 NSX-T 节点</h2>
 <p>将需要替换的变量 export 出来, 替换 spec.json.tpl 中的内容, 提供给 govc 来导入 ova <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">OVA=&quot;/mnt/driver/VMware/NSX-T_3.1/nsx-unified-appliance-3.1.2.0.0.17884005-le.ova&quot;</span><br><span class="line">DC=&quot;HDC&quot;</span><br><span class="line">DS=&quot;NAS-Shared&quot;</span><br><span class="line">POOL=&quot;/HDC/host/Mars/Resources/Test&quot;</span><br><span class="line">VM_FOLDER=&quot;/HDC/vm/Lab/NSX-T&quot;</span><br><span class="line"></span><br><span class="line">export NETWORK=&quot;SG-SVC-11&quot;</span><br><span class="line">export NETMASK=&quot;255.255.255.0&quot;</span><br><span class="line">export GATEWAY=&quot;192.168.11.254&quot;</span><br><span class="line">export DOMAIN=&quot;int.vopsdev.com&quot;</span><br><span class="line">export DNS=&quot;192.168.11.10&quot;</span><br><span class="line">export NTP=&quot;1.ntp.svc.vopsdev.com,2.ntp.svc.vopsdev.com&quot;</span><br><span class="line">export NSX_PASSWORD=&#x27;CHANGEME&#x27;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># the 1st one</span><br><span class="line">export NSX_HOSTNAME=&quot;nsx-0&quot;</span><br><span class="line">export NSX_IP=&quot;192.168.11.30&quot;</span><br><span class="line">envsubst &lt; spec.json.tpl &gt; /tmp/spec.json</span><br><span class="line">govc import.ova --options=/tmp/spec.json --name=$NSX_HOSTNAME -ds=$DS -dc=$DC -pool=$POOL -folder=$VM_FOLDER $OVA</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># the 2nd one</span><br><span class="line">export NSX_HOSTNAME=&quot;nsx-1&quot;</span><br><span class="line">export NSX_IP=&quot;192.168.11.31&quot;</span><br><span class="line">envsubst &lt; spec.json.tpl &gt; /tmp/spec.json</span><br><span class="line">govc import.ova --options=/tmp/spec.json --name=$NSX_HOSTNAME -ds=$DS -dc=$DC -pool=$POOL -folder=$VM_FOLDER $OVA</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># the 3rd one</span><br><span class="line">export NSX_HOSTNAME=&quot;nsx-2&quot;</span><br><span class="line">export NSX_IP=&quot;192.168.11.32&quot;</span><br><span class="line">envsubst &lt; spec.json.tpl &gt; /tmp/spec.json</span><br><span class="line">govc import.ova --options=/tmp/spec.json --name=$NSX_HOSTNAME -ds=$DS -dc=$DC -pool=$POOL -folder=$VM_FOLDER $OVA</span><br></pre></td></tr></table></figure> 根据环境将变量设置为需要的值, 然后复制粘贴到命令行即可.</p>
 <h2 id="节点加入集群">节点加入集群</h2>
-<p>SSH 登入 nsx-0 获取 cluster id 和 thumbprint <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">get cluster config</span><br><span class="line">get certificate api thumbprint</span><br></pre></td></tr></table></figure></p>
+<p>SSH 登入 nsx-0, 设置 cluster vip, 获取 cluster id 和 thumbprint <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">set cluster vip 192.168.11.33</span><br><span class="line">get cluster config</span><br><span class="line">get certificate api thumbprint</span><br></pre></td></tr></table></figure></p>
+<div class="note info"><p>如果获取 thumbprint 报错 % An error occurred while reading the API server certificate, 需要等一会儿再试</p>
+</div>
 <p>SSH 登入其他节点, 使用第一个节点上获取的 cluster id 和 thumbprint 加入集群 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">join 192.168.11.30 cluster-id 75fe7cbe-010b-4b11-879c-485380d4b2fd username admin password &#x27;CHANGEME&#x27; thumbprint 924746f887524722e1caf02de69dec73c25284e7770b63cdbc3e619da99dd44e</span><br></pre></td></tr></table></figure></p>
 <p>一个节点加入后, 使用 <code>get cluster status</code> 检查集群状态. 直到 Overal Status 变成 STABLE 以后再加下一个.</p>
-<p>在任意一个节点上设置集群 VIP <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">set cluster vip 192.168.11.33</span><br></pre></td></tr></table></figure></p>
 <p>最后测试通过 VIP 访问 NSX-T Manager UI: <img src="nsx-t-ui.png"></p>
 
     </div>
