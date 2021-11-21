@@ -1,42 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>NSX-T 3: 替换 NSX-T Manager 证书</title>
-    <url>/3718857964/</url>
-    <content><![CDATA[<p>使用 PKI 签发的服务器证书替换 NSX-T Manager 的 cluster 与 node 自签名证书, 消除用户访问时的浏览器警告 <span id="more"></span></p>
-<h2 id="通过-pki-为-nsx-manager-签发证书">通过 PKI 为 NSX Manager 签发证书</h2>
-<p>方便起见, 这里使用同一个通配符证书来替换 cluster 证书以及所有三个 node 的证书.</p>
-<p>证书的 openssl 配置文件: etc/nsx.conf:</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">[ req ]</span><br><span class="line">default_bits            = 2048                  # RSA key size</span><br><span class="line">encrypt_key             = no                    # Protect private key</span><br><span class="line">default_md              = sha256                # MD to use</span><br><span class="line">utf8                    = yes                   # Input is UTF-8</span><br><span class="line">string_mask             = utf8only              # Emit UTF-8 strings</span><br><span class="line">prompt                  = no                    # Prompt for DN</span><br><span class="line">distinguished_name      = server_dn             # DN template</span><br><span class="line">req_extensions          = server_reqext         # Desired extensions</span><br><span class="line"></span><br><span class="line">[ server_dn ]</span><br><span class="line">0.domainComponent       = com</span><br><span class="line">1.domainComponent       = vopsdev</span><br><span class="line">organizationName        = &quot;VOPSDEV&quot;</span><br><span class="line">commonName              = nsx</span><br><span class="line"></span><br><span class="line">[ server_reqext ]</span><br><span class="line">keyUsage                = critical,digitalSignature,keyEncipherment,dataEncipherment,nonRepudiation</span><br><span class="line">extendedKeyUsage        = serverAuth,clientAuth</span><br><span class="line">subjectKeyIdentifier    = hash</span><br><span class="line">subjectAltName          = @san</span><br><span class="line"></span><br><span class="line">[ san ]</span><br><span class="line">DNS.1   = vopsdev.com</span><br><span class="line">DNS.2   = *.vopsdev.com</span><br><span class="line">DNS.3   = *.int.vopsdev.com</span><br><span class="line">DNS.4   = *.svc.vopsdev.com</span><br><span class="line">DNS.5   = localhost</span><br><span class="line">IP.1    = 192.168.11.30</span><br><span class="line">IP.2    = 192.168.11.31</span><br><span class="line">IP.3    = 192.168.11.32</span><br><span class="line">IP.4    = 192.168.11.33</span><br><span class="line">IP.5    = 127.0.0.1</span><br></pre></td></tr></table></figure>
-<p>根据需要调整配置文件的内容.</p>
-<p>我的 PKI 包含一个 openssl root CA 和一个 hashicorp vault issuing CA. 使用 openssl 创建私钥和证书请求文件 csr, 然后向 vault issuing CA 请求签发服务器证书</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">openssl genpkey -out key/nsx.key -outform PEM -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -pkeyopt rsa_keygen_pubexp:65537</span><br><span class="line">openssl req -new -config etc/nsx.conf -out csr/nsx.csr -key key/nsx.key</span><br><span class="line"></span><br><span class="line">vault write vopsdev-intermediate-ca-g1/sign-verbatim/general-server csr=@csr/nsx.csr ttl=&quot;87600h&quot;</span><br></pre></td></tr></table></figure>
-<p>将完整证书链保存为 nsx.full-chain.crt</p>
-<h2 id="替换-nsx-manager-证书">替换 NSX Manager 证书</h2>
-<p>导入 PKI 的 root CA 证书: System, Settings, Certificates, Import CA Certificate</p>
-<p><img src="import-root-ca.png" /></p>
-<p>导入 PKI 签发的 nsx 服务器证书与私钥: System, Settings, Certificates, Import Certificate</p>
-<p><img src="import-nsx-cert.png" /></p>
-<p>导入完成后记录这个证书的 ID</p>
-<p>调用 API 设置 cluster 证书和 node 证书</p>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">ID=f7ba2345-f521-4572-860b-9ab4fc5a8c07</span><br><span class="line"></span><br><span class="line"># cluster</span><br><span class="line">curl -k -X POST -u &#x27;admin:CHANGEME&#x27; &quot;https://nsx.svc.vopsdev.com/api/v1/cluster/api-certificate?action=set_cluster_certificate&amp;certificate_id=$ID&quot;</span><br><span class="line"></span><br><span class="line"># nsx-0</span><br><span class="line">curl -k -X POST -u &#x27;admin:CHANGEME&#x27; &quot;https://nsx-0.int.vopsdev.com/api/v1/node/services/http?action=apply_certificate&amp;certificate_id=$ID&quot;</span><br><span class="line"># nsx-1</span><br><span class="line">curl -k -X POST -u &#x27;admin:CHANGEME&#x27; &quot;https://nsx-1.int.vopsdev.com/api/v1/node/services/http?action=apply_certificate&amp;certificate_id=$ID&quot;</span><br><span class="line"># nsx-2</span><br><span class="line">curl -k -X POST -u &#x27;admin:CHANGEME&#x27; &quot;https://nsx-2.int.vopsdev.com/api/v1/node/services/http?action=apply_certificate&amp;certificate_id=$ID&quot;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<div class="note info"><p>这里 NSX-T 会验证 crl, 如果你的 CDP 无法正常访问 (例如很多 ADCS CA 仅仅配置了将 crl 发布到 ldap), 你需要禁用 crl 检查</p>
-</div>
-<p>最后刷新浏览器测试</p>
-<p><img src="check-cert.png" /></p>
-]]></content>
-      <categories>
-        <category>VMware</category>
-        <category>NSX-T</category>
-      </categories>
-      <tags>
-        <tag>VMware</tag>
-        <tag>NSX-T</tag>
-        <tag>TLS</tag>
-        <tag>PKI</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>NSX-T 3: 命令行方式部署 NSX-T Manager 集群</title>
     <url>/1636359959/</url>
     <content><![CDATA[<p>使用命令行方式在 vSphere 平台部署 NSX-T 3.1 三节点集群</p>
@@ -48,10 +12,10 @@
 <li>一旦第一次做成功以后, 后面重新部署只需要复制粘贴即可, 比 UI 方式快捷</li>
 </ul>
 <h2 id="准备配置模板">准备配置模板</h2>
-<p>首先提取 ova 的 spec.json <figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">OVA=&quot;/mnt/driver/VMware/NSX-T_3.1/nsx-unified-appliance-3.1.2.0.0.17884005-le.ova&quot;</span><br><span class="line">govc import.spec $OVA &gt; spec.json.tpl</span><br></pre></td></tr></table></figure></p>
-<p>根据环境的定制需求, 将 spec.json.tpl 中可变的字段使用变量替换: <figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  &quot;Deployment&quot;: &quot;small&quot;,</span><br><span class="line">  &quot;DiskProvisioning&quot;: &quot;thin&quot;,</span><br><span class="line">  &quot;IPAllocationPolicy&quot;: &quot;fixedPolicy&quot;,</span><br><span class="line">  &quot;IPProtocol&quot;: &quot;IPv4&quot;,</span><br><span class="line">  &quot;PropertyMapping&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_passwd_0&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;$NSX_PASSWORD&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_cli_passwd_0&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;$NSX_PASSWORD&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_cli_audit_passwd_0&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;$NSX_PASSWORD&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_cli_username&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;admin&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_cli_audit_username&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;audit&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;extraPara&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_hostname&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;$NSX_HOSTNAME&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_role&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;NSX Manager&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_ip_0&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;$NSX_IP&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_netmask_0&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;$NETMASK&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_gateway_0&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;$GATEWAY&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_dns1_0&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;$DNS&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_domain_0&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;$DOMAIN&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_ntp_0&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;$NTP&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_isSSHEnabled&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;True&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_allowSSHRootLogin&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;True&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;nsx_swIntegrityCheck&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;False&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;mpIp&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;mpToken&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;mpThumbprint&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;mpNodeId&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Key&quot;: &quot;mpClusterId&quot;,</span><br><span class="line">      &quot;Value&quot;: &quot;&quot;</span><br><span class="line">    &#125;</span><br><span class="line">  ],</span><br><span class="line">  &quot;NetworkMapping&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;Name&quot;: &quot;Network 1&quot;,</span><br><span class="line">      &quot;Network&quot;: &quot;$NETWORK&quot;</span><br><span class="line">    &#125;</span><br><span class="line">  ],</span><br><span class="line">  &quot;MarkAsTemplate&quot;: false,</span><br><span class="line">  &quot;PowerOn&quot;: true,</span><br><span class="line">  &quot;InjectOvfEnv&quot;: false,</span><br><span class="line">  &quot;WaitForIP&quot;: false,</span><br><span class="line">  &quot;Name&quot;: null</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>首先提取 ova 的 spec.json <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">OVA=<span class="string">&quot;/mnt/driver/VMware/NSX-T_3.1/nsx-unified-appliance-3.1.2.0.0.17884005-le.ova&quot;</span></span><br><span class="line">govc import.spec <span class="variable">$OVA</span> &gt; spec.json.tpl</span><br></pre></td></tr></table></figure></p>
+<p>根据环境的定制需求, 将 spec.json.tpl 中可变的字段使用变量替换: <figure class="highlight json"><table><tr><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;Deployment&quot;</span>: <span class="string">&quot;small&quot;</span>,</span><br><span class="line">  <span class="attr">&quot;DiskProvisioning&quot;</span>: <span class="string">&quot;thin&quot;</span>,</span><br><span class="line">  <span class="attr">&quot;IPAllocationPolicy&quot;</span>: <span class="string">&quot;fixedPolicy&quot;</span>,</span><br><span class="line">  <span class="attr">&quot;IPProtocol&quot;</span>: <span class="string">&quot;IPv4&quot;</span>,</span><br><span class="line">  <span class="attr">&quot;PropertyMapping&quot;</span>: [</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_passwd_0&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;$NSX_PASSWORD&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_cli_passwd_0&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;$NSX_PASSWORD&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_cli_audit_passwd_0&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;$NSX_PASSWORD&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_cli_username&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;admin&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_cli_audit_username&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;audit&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;extraPara&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_hostname&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;$NSX_HOSTNAME&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_role&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;NSX Manager&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_ip_0&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;$NSX_IP&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_netmask_0&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;$NETMASK&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_gateway_0&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;$GATEWAY&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_dns1_0&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;$DNS&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_domain_0&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;$DOMAIN&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_ntp_0&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;$NTP&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_isSSHEnabled&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;True&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_allowSSHRootLogin&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;True&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;nsx_swIntegrityCheck&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;False&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;mpIp&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;mpToken&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;mpThumbprint&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;mpNodeId&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Key&quot;</span>: <span class="string">&quot;mpClusterId&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Value&quot;</span>: <span class="string">&quot;&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">  ],</span><br><span class="line">  <span class="attr">&quot;NetworkMapping&quot;</span>: [</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Name&quot;</span>: <span class="string">&quot;Network 1&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Network&quot;</span>: <span class="string">&quot;$NETWORK&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">  ],</span><br><span class="line">  <span class="attr">&quot;MarkAsTemplate&quot;</span>: <span class="literal">false</span>,</span><br><span class="line">  <span class="attr">&quot;PowerOn&quot;</span>: <span class="literal">true</span>,</span><br><span class="line">  <span class="attr">&quot;InjectOvfEnv&quot;</span>: <span class="literal">false</span>,</span><br><span class="line">  <span class="attr">&quot;WaitForIP&quot;</span>: <span class="literal">false</span>,</span><br><span class="line">  <span class="attr">&quot;Name&quot;</span>: <span class="literal">null</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <h2 id="使用-govc-部署-nsx-t-节点">使用 govc 部署 NSX-T 节点</h2>
-<p>将需要替换的变量 export 出来, 替换 spec.json.tpl 中的内容, 提供给 govc 来导入 ova <figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">OVA=&quot;/mnt/driver/VMware/NSX-T_3.1/nsx-unified-appliance-3.1.2.0.0.17884005-le.ova&quot;</span><br><span class="line">DC=&quot;HDC&quot;</span><br><span class="line">DS=&quot;NAS-Shared&quot;</span><br><span class="line">POOL=&quot;/HDC/host/Mars/Resources/Test&quot;</span><br><span class="line">VM_FOLDER=&quot;/HDC/vm/Lab/NSX-T&quot;</span><br><span class="line"></span><br><span class="line">export NETWORK=&quot;SG-SVC-11&quot;</span><br><span class="line">export NETMASK=&quot;255.255.255.0&quot;</span><br><span class="line">export GATEWAY=&quot;192.168.11.254&quot;</span><br><span class="line">export DOMAIN=&quot;int.vopsdev.com&quot;</span><br><span class="line">export DNS=&quot;192.168.11.10&quot;</span><br><span class="line">export NTP=&quot;1.ntp.svc.vopsdev.com,2.ntp.svc.vopsdev.com&quot;</span><br><span class="line">export NSX_PASSWORD=&#x27;CHANGEME&#x27;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># the 1st one</span><br><span class="line">export NSX_HOSTNAME=&quot;nsx-0&quot;</span><br><span class="line">export NSX_IP=&quot;192.168.11.30&quot;</span><br><span class="line">envsubst &lt; spec.json.tpl &gt; /tmp/spec.json</span><br><span class="line">govc import.ova --options=/tmp/spec.json --name=$NSX_HOSTNAME -ds=$DS -dc=$DC -pool=$POOL -folder=$VM_FOLDER $OVA</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># the 2nd one</span><br><span class="line">export NSX_HOSTNAME=&quot;nsx-1&quot;</span><br><span class="line">export NSX_IP=&quot;192.168.11.31&quot;</span><br><span class="line">envsubst &lt; spec.json.tpl &gt; /tmp/spec.json</span><br><span class="line">govc import.ova --options=/tmp/spec.json --name=$NSX_HOSTNAME -ds=$DS -dc=$DC -pool=$POOL -folder=$VM_FOLDER $OVA</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># the 3rd one</span><br><span class="line">export NSX_HOSTNAME=&quot;nsx-2&quot;</span><br><span class="line">export NSX_IP=&quot;192.168.11.32&quot;</span><br><span class="line">envsubst &lt; spec.json.tpl &gt; /tmp/spec.json</span><br><span class="line">govc import.ova --options=/tmp/spec.json --name=$NSX_HOSTNAME -ds=$DS -dc=$DC -pool=$POOL -folder=$VM_FOLDER $OVA</span><br></pre></td></tr></table></figure> 根据环境将变量设置为需要的值, 然后复制粘贴到命令行即可.</p>
+<p>将需要替换的变量 export 出来, 替换 spec.json.tpl 中的内容, 提供给 govc 来导入 ova <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">OVA=<span class="string">&quot;/mnt/driver/VMware/NSX-T_3.1/nsx-unified-appliance-3.1.2.0.0.17884005-le.ova&quot;</span></span><br><span class="line">DC=<span class="string">&quot;HDC&quot;</span></span><br><span class="line">DS=<span class="string">&quot;NAS-Shared&quot;</span></span><br><span class="line">POOL=<span class="string">&quot;/HDC/host/Mars/Resources/Test&quot;</span></span><br><span class="line">VM_FOLDER=<span class="string">&quot;/HDC/vm/Lab/NSX-T&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">export</span> NETWORK=<span class="string">&quot;SG-SVC-11&quot;</span></span><br><span class="line"><span class="built_in">export</span> NETMASK=<span class="string">&quot;255.255.255.0&quot;</span></span><br><span class="line"><span class="built_in">export</span> GATEWAY=<span class="string">&quot;192.168.11.254&quot;</span></span><br><span class="line"><span class="built_in">export</span> DOMAIN=<span class="string">&quot;int.vopsdev.com&quot;</span></span><br><span class="line"><span class="built_in">export</span> DNS=<span class="string">&quot;192.168.11.10&quot;</span></span><br><span class="line"><span class="built_in">export</span> NTP=<span class="string">&quot;1.ntp.svc.vopsdev.com,2.ntp.svc.vopsdev.com&quot;</span></span><br><span class="line"><span class="built_in">export</span> NSX_PASSWORD=<span class="string">&#x27;CHANGEME&#x27;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># the 1st one</span></span><br><span class="line"><span class="built_in">export</span> NSX_HOSTNAME=<span class="string">&quot;nsx-0&quot;</span></span><br><span class="line"><span class="built_in">export</span> NSX_IP=<span class="string">&quot;192.168.11.30&quot;</span></span><br><span class="line">envsubst &lt; spec.json.tpl &gt; /tmp/spec.json</span><br><span class="line">govc import.ova --options=/tmp/spec.json --name=<span class="variable">$NSX_HOSTNAME</span> -ds=<span class="variable">$DS</span> -dc=<span class="variable">$DC</span> -pool=<span class="variable">$POOL</span> -folder=<span class="variable">$VM_FOLDER</span> <span class="variable">$OVA</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># the 2nd one</span></span><br><span class="line"><span class="built_in">export</span> NSX_HOSTNAME=<span class="string">&quot;nsx-1&quot;</span></span><br><span class="line"><span class="built_in">export</span> NSX_IP=<span class="string">&quot;192.168.11.31&quot;</span></span><br><span class="line">envsubst &lt; spec.json.tpl &gt; /tmp/spec.json</span><br><span class="line">govc import.ova --options=/tmp/spec.json --name=<span class="variable">$NSX_HOSTNAME</span> -ds=<span class="variable">$DS</span> -dc=<span class="variable">$DC</span> -pool=<span class="variable">$POOL</span> -folder=<span class="variable">$VM_FOLDER</span> <span class="variable">$OVA</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># the 3rd one</span></span><br><span class="line"><span class="built_in">export</span> NSX_HOSTNAME=<span class="string">&quot;nsx-2&quot;</span></span><br><span class="line"><span class="built_in">export</span> NSX_IP=<span class="string">&quot;192.168.11.32&quot;</span></span><br><span class="line">envsubst &lt; spec.json.tpl &gt; /tmp/spec.json</span><br><span class="line">govc import.ova --options=/tmp/spec.json --name=<span class="variable">$NSX_HOSTNAME</span> -ds=<span class="variable">$DS</span> -dc=<span class="variable">$DC</span> -pool=<span class="variable">$POOL</span> -folder=<span class="variable">$VM_FOLDER</span> <span class="variable">$OVA</span></span><br></pre></td></tr></table></figure> 根据环境将变量设置为需要的值, 然后复制粘贴到命令行即可.</p>
 <h2 id="节点加入集群">节点加入集群</h2>
 <p>SSH 登入 nsx-0, 设置 cluster vip, 获取 cluster id 和 thumbprint <figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">set cluster vip 192.168.11.33</span><br><span class="line">get cluster config</span><br><span class="line">get certificate api thumbprint</span><br></pre></td></tr></table></figure></p>
 <div class="note info"><p>如果获取 thumbprint 报错 % An error occurred while reading the API server certificate, 需要等一会儿再试</p>
@@ -68,6 +32,42 @@
         <tag>VMware</tag>
         <tag>NSX-T</tag>
         <tag>govc</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>NSX-T 3: 替换 NSX-T Manager 证书</title>
+    <url>/3718857964/</url>
+    <content><![CDATA[<p>使用 PKI 签发的服务器证书替换 NSX-T Manager 的 cluster 与 node 自签名证书, 消除用户访问时的浏览器警告 <span id="more"></span></p>
+<h2 id="通过-pki-为-nsx-manager-签发证书">通过 PKI 为 NSX Manager 签发证书</h2>
+<p>方便起见, 这里使用同一个通配符证书来替换 cluster 证书以及所有三个 node 的证书.</p>
+<p>证书的 openssl 配置文件: etc/nsx.conf:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">[ req ]</span><br><span class="line">default_bits            = 2048                  # RSA key size</span><br><span class="line">encrypt_key             = no                    # Protect private key</span><br><span class="line">default_md              = sha256                # MD to use</span><br><span class="line">utf8                    = yes                   # Input is UTF-8</span><br><span class="line">string_mask             = utf8only              # Emit UTF-8 strings</span><br><span class="line">prompt                  = no                    # Prompt for DN</span><br><span class="line">distinguished_name      = server_dn             # DN template</span><br><span class="line">req_extensions          = server_reqext         # Desired extensions</span><br><span class="line"></span><br><span class="line">[ server_dn ]</span><br><span class="line">0.domainComponent       = com</span><br><span class="line">1.domainComponent       = vopsdev</span><br><span class="line">organizationName        = &quot;VOPSDEV&quot;</span><br><span class="line">commonName              = nsx</span><br><span class="line"></span><br><span class="line">[ server_reqext ]</span><br><span class="line">keyUsage                = critical,digitalSignature,keyEncipherment,dataEncipherment,nonRepudiation</span><br><span class="line">extendedKeyUsage        = serverAuth,clientAuth</span><br><span class="line">subjectKeyIdentifier    = hash</span><br><span class="line">subjectAltName          = @san</span><br><span class="line"></span><br><span class="line">[ san ]</span><br><span class="line">DNS.1   = vopsdev.com</span><br><span class="line">DNS.2   = *.vopsdev.com</span><br><span class="line">DNS.3   = *.int.vopsdev.com</span><br><span class="line">DNS.4   = *.svc.vopsdev.com</span><br><span class="line">DNS.5   = localhost</span><br><span class="line">IP.1    = 192.168.11.30</span><br><span class="line">IP.2    = 192.168.11.31</span><br><span class="line">IP.3    = 192.168.11.32</span><br><span class="line">IP.4    = 192.168.11.33</span><br><span class="line">IP.5    = 127.0.0.1</span><br></pre></td></tr></table></figure>
+<p>根据需要调整配置文件的内容.</p>
+<p>我的 PKI 包含一个 openssl root CA 和一个 hashicorp vault issuing CA. 使用 openssl 创建私钥和证书请求文件 csr, 然后向 vault issuing CA 请求签发服务器证书</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">openssl genpkey -out key/nsx.key -outform PEM -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -pkeyopt rsa_keygen_pubexp:65537</span><br><span class="line">openssl req -new -config etc/nsx.conf -out csr/nsx.csr -key key/nsx.key</span><br><span class="line"></span><br><span class="line">vault write vopsdev-intermediate-ca-g1/sign-verbatim/general-server csr=@csr/nsx.csr ttl=<span class="string">&quot;87600h&quot;</span></span><br></pre></td></tr></table></figure>
+<p>将完整证书链保存为 nsx.full-chain.crt</p>
+<h2 id="替换-nsx-manager-证书">替换 NSX Manager 证书</h2>
+<p>导入 PKI 的 root CA 证书: System, Settings, Certificates, Import CA Certificate</p>
+<p><img src="import-root-ca.png" /></p>
+<p>导入 PKI 签发的 nsx 服务器证书与私钥: System, Settings, Certificates, Import Certificate</p>
+<p><img src="import-nsx-cert.png" /></p>
+<p>导入完成后记录这个证书的 ID</p>
+<p>调用 API 设置 cluster 证书和 node 证书</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">ID=f7ba2345-f521-4572-860b-9ab4fc5a8c07</span><br><span class="line"></span><br><span class="line"><span class="comment"># cluster</span></span><br><span class="line">curl -k -X POST -u <span class="string">&#x27;admin:CHANGEME&#x27;</span> <span class="string">&quot;https://nsx.svc.vopsdev.com/api/v1/cluster/api-certificate?action=set_cluster_certificate&amp;certificate_id=<span class="variable">$ID</span>&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># nsx-0</span></span><br><span class="line">curl -k -X POST -u <span class="string">&#x27;admin:CHANGEME&#x27;</span> <span class="string">&quot;https://nsx-0.int.vopsdev.com/api/v1/node/services/http?action=apply_certificate&amp;certificate_id=<span class="variable">$ID</span>&quot;</span></span><br><span class="line"><span class="comment"># nsx-1</span></span><br><span class="line">curl -k -X POST -u <span class="string">&#x27;admin:CHANGEME&#x27;</span> <span class="string">&quot;https://nsx-1.int.vopsdev.com/api/v1/node/services/http?action=apply_certificate&amp;certificate_id=<span class="variable">$ID</span>&quot;</span></span><br><span class="line"><span class="comment"># nsx-2</span></span><br><span class="line">curl -k -X POST -u <span class="string">&#x27;admin:CHANGEME&#x27;</span> <span class="string">&quot;https://nsx-2.int.vopsdev.com/api/v1/node/services/http?action=apply_certificate&amp;certificate_id=<span class="variable">$ID</span>&quot;</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<div class="note info"><p>这里 NSX-T 会验证 crl, 如果你的 CDP 无法正常访问 (例如很多 ADCS CA 仅仅配置了将 crl 发布到 ldap), 你需要禁用 crl 检查</p>
+</div>
+<p>最后刷新浏览器测试</p>
+<p><img src="check-cert.png" /></p>
+]]></content>
+      <categories>
+        <category>VMware</category>
+        <category>NSX-T</category>
+      </categories>
+      <tags>
+        <tag>VMware</tag>
+        <tag>NSX-T</tag>
+        <tag>TLS</tag>
+        <tag>PKI</tag>
       </tags>
   </entry>
   <entry>
@@ -164,6 +164,99 @@
       <tags>
         <tag>Linux</tag>
         <tag>CentOS</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>在 OKD4 上体验 StackRox</title>
+    <url>/4142919773/</url>
+    <content><![CDATA[<p>在 OKD 4.8 上部署并体验 StackRox (Red Hat Advanced Cluster Security for Kubernetes) 安全合规平台 <span id="more"></span></p>
+<h2 id="简介">简介</h2>
+<p>StackRox 是红帽收购的一个 K8S 安全合规平台，提供了丰富的 DevSecOps 功能:</p>
+<ul>
+<li>镜像/容器漏洞扫描</li>
+<li>配置最佳实践建议</li>
+<li>风险分析</li>
+<li>网络隔离/访问控制分析和管理</li>
+<li>合规性检查和报表</li>
+<li>威胁主动响应</li>
+</ul>
+<p>该产品被重新命名为 Red Hat Advanced Cluster Security for Kubernetes. 红帽声称会将该项目开源出来，然而目前看来应该还没有完成. 希望能早日看到这个项目.</p>
+<p>StackRox 目前支持的 K8S 平台包括 OCP 3.11, OCP 4.X, EKS, GKE, AKS. 而其支持的节点操作系统包括 Amazon Linux, CentOS, Container-Optimized OS from Google, RHCOS, Debian, RHEL, Ubuntu.</p>
+<p>很明显 OKD4 及其底层的 Fedora CoreOS 并不在支持列表中, 这里仅仅是做一下可行性探索.</p>
+<h2 id="安装控制平面">安装控制平面</h2>
+<p>先简单说一下 StackRox 的架构: 其控制平面组件包含 central + scanner, 需要运行在一个 K8S 管理集群中. 而受控集群上则需要运行集群级别组件 sensor + admission controller，和节点级别组件 collector.</p>
+<p>这里使用 Helm Chart 的方式安装控制平面.</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">helm repo add rhacs https://mirror.openshift.com/pub/rhacs/charts/</span><br><span class="line">helm repo list</span><br></pre></td></tr></table></figure>
+<p>可以发现这里有两个 Charts：rhacs/central-services 和 rhacs/secured-cluster-services 分别对应了控制平面组件和受控集群组件.</p>
+<p>先 <code>helm show values rhacs/central-services</code> 看一下默认参数. 根据自己的环境手工编写 <code>values.yaml</code></p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">imagePullSecrets:</span></span><br><span class="line">  <span class="attr">useFromDefaultServiceAccount:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">env:</span></span><br><span class="line">  <span class="attr">openshift:</span> <span class="number">4</span></span><br><span class="line"><span class="attr">central:</span></span><br><span class="line">  <span class="attr">disableTelemetry:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">exposeMonitoring:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">persistence:</span></span><br><span class="line">    <span class="attr">persistentVolumeClaim:</span></span><br><span class="line">      <span class="attr">claimName:</span> <span class="string">stackrox-central-pvc</span></span><br><span class="line">      <span class="attr">createClaim:</span> <span class="literal">true</span></span><br><span class="line">      <span class="attr">size:</span> <span class="number">100</span></span><br><span class="line">  <span class="attr">exposure:</span></span><br><span class="line">    <span class="attr">route:</span></span><br><span class="line">      <span class="attr">enabled:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure>
+<p>执行安装</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">helm install -n stackrox --create-namespace stackrox-central-services rhacs/central-services -f values.yaml</span><br></pre></td></tr></table></figure>
+<p>输出会给出自动产生的管理员密码，route 信息，并提示保存自动产生的 values:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">oc -n stackrox get secret stackrox-generated-XXXXX -o go-template=<span class="string">&#x27;&#123;&#123; index .data &quot;generated-values.yaml&quot; &#125;&#125;&#x27;</span> | base64 -d &gt; generated-values.yaml</span><br></pre></td></tr></table></figure>
+<p>到此为止，控制平面 Web 界面已经可以访问. 但是为了避免自签名证书带来的麻烦，先将其替换为 letsencrypt 证书.</p>
+<h2 id="替换控制平面证书">替换控制平面证书</h2>
+<p>我的 OKD4 集群都使用 cert-manager 来请求并管理 letsencrypt 证书，并配置了名为 letsencrypt 的 cluster issuer</p>
+<p>请求证书, 保存到一个名为 <code>central-default-tls-cert</code> 的 tls 类型 secret, 并重启 central pod 即可:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">oc delete secret central-default-tls-cert || <span class="literal">true</span></span><br><span class="line"></span><br><span class="line">oc apply -f -&lt;&lt;<span class="string">EOF</span></span><br><span class="line"><span class="string">apiVersion: cert-manager.io/v1</span></span><br><span class="line"><span class="string">kind: Certificate</span></span><br><span class="line"><span class="string">metadata:</span></span><br><span class="line"><span class="string">  name: central-default-tls-cert</span></span><br><span class="line"><span class="string">  namespace: stackrox</span></span><br><span class="line"><span class="string">spec:</span></span><br><span class="line"><span class="string">  secretName: central-default-tls-cert</span></span><br><span class="line"><span class="string">  issuerRef:</span></span><br><span class="line"><span class="string">    name: letsencrypt</span></span><br><span class="line"><span class="string">    kind: ClusterIssuer</span></span><br><span class="line"><span class="string">  dnsNames: [&quot;central-stackrox.apps.atlas-iet4.vopsdev.com&quot;]</span></span><br><span class="line"><span class="string">EOF</span></span><br><span class="line"></span><br><span class="line">oc delete $(oc get pod -l app=central -o name)</span><br></pre></td></tr></table></figure>
+<p>等 central pod 起来后就可以正常访问 web portal 了</p>
+<p><img src="stackrox-web-portal.png" /></p>
+<h2 id="加入受控集群">加入受控集群</h2>
+<p>登入控制平面 web portal 创建 init bundle 用于受控集群和控制平面之间的认证: Platform Configuration, Integrations, Authentication Tokens, Cluster Init Bundle</p>
+<p><img src="cluster-init-bundle.png" /></p>
+<p>点击 Generate Bundle, 提供一个命名, 然后下载 Helm Values</p>
+<p><img src="download-helm-values.png" /></p>
+<p>你的所有受控集群可以使用这同一个 init bundle. 然后就可以使用 helm 来安装受控集群的组件了</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">ENDPOINT=central-stackrox.apps.atlas-iet4.vopsdev.com:443</span><br><span class="line"></span><br><span class="line"><span class="comment"># add atlas-set4 cluster</span></span><br><span class="line">helm install -n stackrox --create-namespace \</span><br><span class="line">  stackrox-secured-cluster-services rhacs/secured-cluster-services \</span><br><span class="line">  -f init-bundle.yaml \</span><br><span class="line">  --<span class="built_in">set</span> clusterName=atlas-set4 \</span><br><span class="line">  --<span class="built_in">set</span> centralEndpoint=<span class="variable">$ENDPOINT</span> \</span><br><span class="line">  --<span class="built_in">set</span> collector.collectionMethod=EBPF</span><br><span class="line"></span><br><span class="line"><span class="comment"># add other clusters ...</span></span><br></pre></td></tr></table></figure>
+<div class="note info"><p>collector 默认的收集方式是 <code>KERNEL_MODULE</code>. 然而 Fedore CoreOS 不在支持列表中, 因此 stackrox 并不提供对应的内核模块, 此时 collector pod 就会不停的崩溃. 为此可以将 <code>collector.collectionMethod</code> 设置为 <code>EBPF</code> 模式.</p>
+</div>
+<p>等各个组件都正常起来后, 就可以在 web portal 上看到受管理的集群了: Platform Configuration, Clusters</p>
+<p><img src="managed-clusters.png" /></p>
+<h2 id="体验安全策略">体验安全策略</h2>
+<p>StackRox 的核心在其安全策略，这里创建几个简单的安全策略来测试其静态检查和动态检查的能力.</p>
+<h3 id="静态漏洞检查">静态漏洞检查</h3>
+<p>创建一个安全策略阻止含有 CVE-2021-27219 安全漏洞的镜像的部署: Platform Configuration, System Policies, +NEW POLICY</p>
+<p>Policy Summary 部分如图设置</p>
+<p><img src="cve-policy-summary-1.png" /></p>
+<p>这里策略针对的生命周期阶段设置为 Deploy</p>
+<p><img src="cve-policy-summary-2.png" /></p>
+<p>这里对策略的作用域进行限制: 该规则被限定到集群 <code>atlas-set4</code> 的项目 <code>smoke-test</code> 下.</p>
+<p>Policy Criteria 部分: 把 Image Contents 下的 CVE 拉到左边的 Policy Section 1 下, 并指定其值为 CVE-2021-27219</p>
+<p><img src="cve-policy-criteria.png" /></p>
+<p>部署阶段的强制行为: 禁止不合规部署</p>
+<p><img src="cve-enforcement.png" /></p>
+<p>保存生效以后, 到 <code>atlas-set4</code> 集群的 <code>smoke-test</code> 命名空间下进行测试:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">oc project smoke-test</span><br><span class="line"></span><br><span class="line">oc apply -f -&lt;&lt;<span class="string">EOF</span></span><br><span class="line"><span class="string">apiVersion: apps/v1</span></span><br><span class="line"><span class="string">kind: Deployment</span></span><br><span class="line"><span class="string">metadata:</span></span><br><span class="line"><span class="string">  labels:</span></span><br><span class="line"><span class="string">    app: test-deploy</span></span><br><span class="line"><span class="string">  name: test-deploy</span></span><br><span class="line"><span class="string">  namespace: smoke-test</span></span><br><span class="line"><span class="string">spec:</span></span><br><span class="line"><span class="string">  replicas: 1</span></span><br><span class="line"><span class="string">  selector:</span></span><br><span class="line"><span class="string">    matchLabels:</span></span><br><span class="line"><span class="string">      app: test-deploy</span></span><br><span class="line"><span class="string">  template:</span></span><br><span class="line"><span class="string">    metadata:</span></span><br><span class="line"><span class="string">      labels:</span></span><br><span class="line"><span class="string">        app: test-deploy</span></span><br><span class="line"><span class="string">    spec:</span></span><br><span class="line"><span class="string">      containers:</span></span><br><span class="line"><span class="string">      - image: docker.io/centos:7.9.2009</span></span><br><span class="line"><span class="string">        name: test-deploy</span></span><br><span class="line"><span class="string">        stdin: true</span></span><br><span class="line"><span class="string">        tty: true</span></span><br><span class="line"><span class="string">EOF</span></span><br><span class="line"></span><br><span class="line">oc get all -l app=test-deploy</span><br></pre></td></tr></table></figure>
+<p>Dockerhub 上的镜像 centos:7.9.2009 含有 CVE-2021-27219 漏洞. 此时可以发现副本数量被强制设置为 0</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">NAME                          READY   UP-TO-DATE   AVAILABLE   AGE</span><br><span class="line">deployment.apps/test-deploy   0/0     0            0           47s</span><br><span class="line"></span><br><span class="line">NAME                                     DESIRED   CURRENT   READY   AGE</span><br><span class="line">replicaset.apps/test-deploy-69bb54cbd4   0         0         0       47s</span><br></pre></td></tr></table></figure>
+<h3 id="运行时行为检查">运行时行为检查</h3>
+<p>禁止容器在运行时执行有风险/可疑的进程. 这里创建一个安全策略, 禁止容器使用 <code>useradd</code>, <code>usermod</code>, 和 <code>adduser</code> 命令</p>
+<p>Policy Summary 部分如图设置</p>
+<p><img src="runtime-policy-summary-1.png" /></p>
+<p>这里策略针对的生命周期阶段设置为 Runtime. Event Sources 设置为 Deployment.</p>
+<p><img src="runtime-policy-summary-2.png" /></p>
+<p>同样这里将该规则限定到集群 <code>atlas-set4</code> 的项目 <code>smoke-test</code> 下</p>
+<p>Policy Criteria 部分: 把 Process Activity 下的 Process Name 拉到左边的 Policy Section 1 下, 并指定其值为 <code>useradd|usermod|adduser</code></p>
+<p><img src="runtime-policy-criteria.png" /></p>
+<p>运行阶段强制行为: 杀死不合规的 pod</p>
+<p><img src="runtime-enforcement.png" /></p>
+<p>保存生效以后, 到 <code>atlas-set4</code> 集群的 <code>smoke-test</code> 命名空间下进行测试 <figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">oc apply -f -&lt;&lt;<span class="string">EOF</span></span><br><span class="line"><span class="string">apiVersion: apps/v1</span></span><br><span class="line"><span class="string">kind: Deployment</span></span><br><span class="line"><span class="string">metadata:</span></span><br><span class="line"><span class="string">  labels:</span></span><br><span class="line"><span class="string">    app: test-runtime</span></span><br><span class="line"><span class="string">  name: test-runtime</span></span><br><span class="line"><span class="string">  namespace: smoke-test</span></span><br><span class="line"><span class="string">spec:</span></span><br><span class="line"><span class="string">  replicas: 1</span></span><br><span class="line"><span class="string">  selector:</span></span><br><span class="line"><span class="string">    matchLabels:</span></span><br><span class="line"><span class="string">      app: test-runtime</span></span><br><span class="line"><span class="string">  template:</span></span><br><span class="line"><span class="string">    metadata:</span></span><br><span class="line"><span class="string">      labels:</span></span><br><span class="line"><span class="string">        app: test-runtime</span></span><br><span class="line"><span class="string">    spec:</span></span><br><span class="line"><span class="string">      containers:</span></span><br><span class="line"><span class="string">      - image: docker.io/centos:7</span></span><br><span class="line"><span class="string">        name: test-runtime</span></span><br><span class="line"><span class="string">        command:</span></span><br><span class="line"><span class="string">        - /bin/bash</span></span><br><span class="line"><span class="string">        - -c</span></span><br><span class="line"><span class="string">        - sleep 60; useradd alice; while true; do sleep 10; done</span></span><br><span class="line"><span class="string">EOF</span></span><br><span class="line"></span><br><span class="line">oc get pod -l app=test-runtime -w</span><br></pre></td></tr></table></figure></p>
+<p>这个容器在启动之后的 60s 后会执行 <code>useradd</code> 命令，此时会因为违规而被杀死 <figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">NAME                            READY   STATUS    RESTARTS   AGE</span><br><span class="line">test-runtime-556bd889d7-4vvsg   1/1     Running   0          7s</span><br><span class="line">test-runtime-556bd889d7-4vvsg   1/1     Terminating   0          63s</span><br><span class="line">test-runtime-556bd889d7-4vvsg   1/1     Terminating   0          63s</span><br><span class="line">test-runtime-556bd889d7-rgjgq   0/1     Pending       0          0s</span><br><span class="line">test-runtime-556bd889d7-rgjgq   0/1     Pending       0          0s</span><br><span class="line">test-runtime-556bd889d7-rgjgq   0/1     Pending       0          0s</span><br><span class="line">test-runtime-556bd889d7-rgjgq   0/1     ContainerCreating   0          0s</span><br><span class="line">test-runtime-556bd889d7-rgjgq   0/1     ContainerCreating   0          2s</span><br><span class="line">test-runtime-556bd889d7-rgjgq   1/1     Running             0          3s</span><br></pre></td></tr></table></figure></p>
+<p>在 web portal 的 Violations 处也可以看到这个违规的信息 <img src="violation.png" /></p>
+<h2 id="参考">参考</h2>
+<ul>
+<li>官方文档: https://docs.openshift.com/acs/3.66/welcome/index.html</li>
+</ul>
+]]></content>
+      <categories>
+        <category>RedHat</category>
+        <category>Openshift</category>
+      </categories>
+      <tags>
+        <tag>OKD4</tag>
+        <tag>Openshift</tag>
+        <tag>StackRox</tag>
+        <tag>Red Hat Advanced Cluster Security for Kubernetes</tag>
       </tags>
   </entry>
   <entry>
@@ -275,8 +368,8 @@
         <category>Openshift</category>
       </categories>
       <tags>
-        <tag>RedHat</tag>
         <tag>Openshift</tag>
+        <tag>RedHat</tag>
       </tags>
   </entry>
   <entry>
@@ -532,8 +625,8 @@
         <category>Openshift</category>
       </categories>
       <tags>
-        <tag>RedHat</tag>
         <tag>Openshift</tag>
+        <tag>RedHat</tag>
       </tags>
   </entry>
   <entry>
@@ -688,8 +781,8 @@
         <category>Openshift</category>
       </categories>
       <tags>
-        <tag>RedHat</tag>
         <tag>Openshift</tag>
+        <tag>RedHat</tag>
       </tags>
   </entry>
   <entry>
@@ -729,8 +822,8 @@
         <category>Openshift</category>
       </categories>
       <tags>
-        <tag>RedHat</tag>
         <tag>Openshift</tag>
+        <tag>RedHat</tag>
       </tags>
   </entry>
   <entry>
@@ -761,8 +854,8 @@
         <category>Openshift</category>
       </categories>
       <tags>
-        <tag>RedHat</tag>
         <tag>Openshift</tag>
+        <tag>RedHat</tag>
       </tags>
   </entry>
   <entry>
@@ -803,8 +896,8 @@
         <category>Openshift</category>
       </categories>
       <tags>
-        <tag>RedHat</tag>
         <tag>Openshift</tag>
+        <tag>RedHat</tag>
       </tags>
   </entry>
   <entry>
@@ -840,8 +933,8 @@
         <category>Openshift</category>
       </categories>
       <tags>
-        <tag>RedHat</tag>
         <tag>Openshift</tag>
+        <tag>RedHat</tag>
       </tags>
   </entry>
 </search>

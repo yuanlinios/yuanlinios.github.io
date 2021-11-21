@@ -99,9 +99,9 @@
   <ul class="main-menu menu">
         <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li>
         <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
-        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">14</span></a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">17</span></a></li>
         <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">10</span></a></li>
-        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">15</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">16</span></a></li>
       <li class="menu-item menu-item-search">
         <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
         </a>
@@ -170,7 +170,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">15</span>
+          <span class="site-state-item-count">16</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -181,7 +181,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-count">17</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -328,7 +328,7 @@
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">[ req ]</span><br><span class="line">default_bits            = 2048                  # RSA key size</span><br><span class="line">encrypt_key             = no                    # Protect private key</span><br><span class="line">default_md              = sha256                # MD to use</span><br><span class="line">utf8                    = yes                   # Input is UTF-8</span><br><span class="line">string_mask             = utf8only              # Emit UTF-8 strings</span><br><span class="line">prompt                  = no                    # Prompt for DN</span><br><span class="line">distinguished_name      = server_dn             # DN template</span><br><span class="line">req_extensions          = server_reqext         # Desired extensions</span><br><span class="line"></span><br><span class="line">[ server_dn ]</span><br><span class="line">0.domainComponent       = com</span><br><span class="line">1.domainComponent       = vopsdev</span><br><span class="line">organizationName        = &quot;VOPSDEV&quot;</span><br><span class="line">commonName              = nsx</span><br><span class="line"></span><br><span class="line">[ server_reqext ]</span><br><span class="line">keyUsage                = critical,digitalSignature,keyEncipherment,dataEncipherment,nonRepudiation</span><br><span class="line">extendedKeyUsage        = serverAuth,clientAuth</span><br><span class="line">subjectKeyIdentifier    = hash</span><br><span class="line">subjectAltName          = @san</span><br><span class="line"></span><br><span class="line">[ san ]</span><br><span class="line">DNS.1   = vopsdev.com</span><br><span class="line">DNS.2   = *.vopsdev.com</span><br><span class="line">DNS.3   = *.int.vopsdev.com</span><br><span class="line">DNS.4   = *.svc.vopsdev.com</span><br><span class="line">DNS.5   = localhost</span><br><span class="line">IP.1    = 192.168.11.30</span><br><span class="line">IP.2    = 192.168.11.31</span><br><span class="line">IP.3    = 192.168.11.32</span><br><span class="line">IP.4    = 192.168.11.33</span><br><span class="line">IP.5    = 127.0.0.1</span><br></pre></td></tr></table></figure>
 <p>根据需要调整配置文件的内容.</p>
 <p>我的 PKI 包含一个 openssl root CA 和一个 hashicorp vault issuing CA. 使用 openssl 创建私钥和证书请求文件 csr, 然后向 vault issuing CA 请求签发服务器证书</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">openssl genpkey -out key/nsx.key -outform PEM -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -pkeyopt rsa_keygen_pubexp:65537</span><br><span class="line">openssl req -new -config etc/nsx.conf -out csr/nsx.csr -key key/nsx.key</span><br><span class="line"></span><br><span class="line">vault write vopsdev-intermediate-ca-g1/sign-verbatim/general-server csr=@csr/nsx.csr ttl=&quot;87600h&quot;</span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">openssl genpkey -out key/nsx.key -outform PEM -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -pkeyopt rsa_keygen_pubexp:65537</span><br><span class="line">openssl req -new -config etc/nsx.conf -out csr/nsx.csr -key key/nsx.key</span><br><span class="line"></span><br><span class="line">vault write vopsdev-intermediate-ca-g1/sign-verbatim/general-server csr=@csr/nsx.csr ttl=<span class="string">&quot;87600h&quot;</span></span><br></pre></td></tr></table></figure>
 <p>将完整证书链保存为 nsx.full-chain.crt</p>
 <h2 id="替换-nsx-manager-证书">替换 NSX Manager 证书</h2>
 <p>导入 PKI 的 root CA 证书: System, Settings, Certificates, Import CA Certificate</p>
@@ -337,7 +337,7 @@
 <p><img src="import-nsx-cert.png"></p>
 <p>导入完成后记录这个证书的 ID</p>
 <p>调用 API 设置 cluster 证书和 node 证书</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">ID=f7ba2345-f521-4572-860b-9ab4fc5a8c07</span><br><span class="line"></span><br><span class="line"># cluster</span><br><span class="line">curl -k -X POST -u &#x27;admin:CHANGEME&#x27; &quot;https://nsx.svc.vopsdev.com/api/v1/cluster/api-certificate?action=set_cluster_certificate&amp;certificate_id=$ID&quot;</span><br><span class="line"></span><br><span class="line"># nsx-0</span><br><span class="line">curl -k -X POST -u &#x27;admin:CHANGEME&#x27; &quot;https://nsx-0.int.vopsdev.com/api/v1/node/services/http?action=apply_certificate&amp;certificate_id=$ID&quot;</span><br><span class="line"># nsx-1</span><br><span class="line">curl -k -X POST -u &#x27;admin:CHANGEME&#x27; &quot;https://nsx-1.int.vopsdev.com/api/v1/node/services/http?action=apply_certificate&amp;certificate_id=$ID&quot;</span><br><span class="line"># nsx-2</span><br><span class="line">curl -k -X POST -u &#x27;admin:CHANGEME&#x27; &quot;https://nsx-2.int.vopsdev.com/api/v1/node/services/http?action=apply_certificate&amp;certificate_id=$ID&quot;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">ID=f7ba2345-f521-4572-860b-9ab4fc5a8c07</span><br><span class="line"></span><br><span class="line"><span class="comment"># cluster</span></span><br><span class="line">curl -k -X POST -u <span class="string">&#x27;admin:CHANGEME&#x27;</span> <span class="string">&quot;https://nsx.svc.vopsdev.com/api/v1/cluster/api-certificate?action=set_cluster_certificate&amp;certificate_id=<span class="variable">$ID</span>&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># nsx-0</span></span><br><span class="line">curl -k -X POST -u <span class="string">&#x27;admin:CHANGEME&#x27;</span> <span class="string">&quot;https://nsx-0.int.vopsdev.com/api/v1/node/services/http?action=apply_certificate&amp;certificate_id=<span class="variable">$ID</span>&quot;</span></span><br><span class="line"><span class="comment"># nsx-1</span></span><br><span class="line">curl -k -X POST -u <span class="string">&#x27;admin:CHANGEME&#x27;</span> <span class="string">&quot;https://nsx-1.int.vopsdev.com/api/v1/node/services/http?action=apply_certificate&amp;certificate_id=<span class="variable">$ID</span>&quot;</span></span><br><span class="line"><span class="comment"># nsx-2</span></span><br><span class="line">curl -k -X POST -u <span class="string">&#x27;admin:CHANGEME&#x27;</span> <span class="string">&quot;https://nsx-2.int.vopsdev.com/api/v1/node/services/http?action=apply_certificate&amp;certificate_id=<span class="variable">$ID</span>&quot;</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
 <div class="note info"><p>这里 NSX-T 会验证 crl, 如果你的 CDP 无法正常访问 (例如很多 ADCS CA 仅仅配置了将 crl 发布到 ldap), 你需要禁用 crl 检查</p>
 </div>
 <p>最后刷新浏览器测试</p>
@@ -383,6 +383,9 @@
                 </a>
             </div>
             <div class="post-nav-item">
+                <a href="/4142919773/" rel="next" title="在 OKD4 上体验 StackRox">
+                  在 OKD4 上体验 StackRox <i class="fa fa-chevron-right"></i>
+                </a>
             </div>
           </div>
     </footer>
