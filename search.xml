@@ -998,4 +998,37 @@
         <tag>RedHat</tag>
       </tags>
   </entry>
+  <entry>
+    <title>解决 Intel(R) I350-T4 在 vSphere 7 上的高延时问题</title>
+    <url>/1151338401/</url>
+    <content><![CDATA[<p>记录下如何解决 ESXi 7 主机上的 Intel(R) I350-T4 网卡周期性出现的高延迟丢包问题.</p>
+<span id="more"></span>
+<h2 id="问题现象">问题现象</h2>
+<p>实验环境有四台 Lenovo M920X 运行 ESXi 7.0U1 组成的集群, 使用的是 Intel(R) I350-T4 四口千兆网卡. 差不多每运行一两周后某台主机的某个网口就会出现超高延迟 (~1s) 并伴随丢包.</p>
+<p>从 <code>vmkernel.log</code> 中可以发现下面的日志</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">2022-01-09T16:31:39.224Z cpu13:1049182)igbn: igbn_CheckRxHang:1382: vmnic1: false hang detected on RX queue 0</span><br><span class="line">2022-01-09T16:31:45.246Z cpu13:1049182)igbn: igbn_CheckRxHang:1382: vmnic1: false hang detected on RX queue 0</span><br><span class="line">2022-01-09T16:31:51.260Z cpu13:1049182)igbn: igbn_CheckRxHang:1382: vmnic1: false hang detected on RX queue 0</span><br><span class="line">2022-01-09T16:31:57.270Z cpu13:1049182)igbn: igbn_CheckRxHang:1382: vmnic1: false hang detected on RX queue 0</span><br><span class="line">2022-01-09T16:32:03.293Z cpu13:1049182)igbn: igbn_CheckRxHang:1382: vmnic1: false hang detected on RX queue 0</span><br></pre></td></tr></table></figure>
+<p>此时插拔网线, 禁用/启用网卡均无效, 只能重启主机才能使该网口恢复正常.</p>
+<h2 id="失败的尝试">失败的尝试</h2>
+<h3 id="禁用节能模式-energy-efficient-ethernet">禁用节能模式 Energy Efficient Ethernet</h3>
+<p>网上搜索到过一个<a href="https://blog.csdn.net/weixin_38623994/article/details/98939579">类似的问题</a>, 不过是在 ESXi 6.5 上的, 由 igbn 1.3.1 版本驱动的 bug 导致. 但是文中提到的选项参数在 ESXi 7 中已经不可用. 尝试在对端物理交换机上禁用节能模式后, 状况并没有显著差别.</p>
+<h3 id="替换官方驱动">替换官方驱动</h3>
+<p>将 inbox igbn 驱动替换为 Intel 提供的驱动. 使用 <code>vmkchdev -l</code> 来获取设备的 <code>VID:DID SVID:SDID</code>, 然后去 <a href="https://customerconnect.vmware.com">https://customerconnect.vmware.com</a> 搜索适用的驱动下载. 替换驱动并重启主机后, 问题依旧.</p>
+<h3 id="调整-tsolro">调整 TSO/LRO</h3>
+<p>尝试禁用/启用 TSO/LRO <figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">esxcli system settings advanced set -o /Net/UseHwTSO -i 0</span><br><span class="line">esxcli system settings advanced set -o /Net/UseHwTSO6 -i 0</span><br><span class="line">esxcli system settings advanced set -o /Net/TcpipDefLROEnabled -i 0</span><br></pre></td></tr></table></figure></p>
+<p>然而结果并没有什么显著差别 <figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">esxcli system settings advanced set -o /Net/UseHwTSO -i 1</span><br><span class="line">esxcli system settings advanced set -o /Net/UseHwTSO6 -i 1</span><br><span class="line">esxcli system settings advanced set -o /Net/TcpipDefLROEnabled -i 1</span><br></pre></td></tr></table></figure></p>
+<h3 id="替换同型号网卡">替换同型号网卡</h3>
+<p>从另外一个渠道买入同型号的 Intel(R) I350-T4, 给其中一台主机替换上, 经过一段时间后问题依然重现. 至此可以排除网卡硬件本身的问题.</p>
+<h2 id="解决方法">解决方法</h2>
+<p>偶然一次检查网卡统计信息时发现有比较大的 Receive FIFO error: <figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">esxcli network nic stats get -n vmnic1</span><br><span class="line"></span><br><span class="line">NIC statistics for vmnic0</span><br><span class="line"> ...</span><br><span class="line"> Receive FIFO errors: 834656</span><br><span class="line"></span><br></pre></td></tr></table></figure></p>
+<p>结合 <a href="https://kb.vmware.com/s/article/50121760">KB 50121760</a> 尝试调整 ring buffer</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">esxcli network nic stats get -n vmnic1</span><br><span class="line">esxcli network nic ring preset get -n vmnic1</span><br><span class="line">esxcli network nic ring current get -n vmnic1</span><br><span class="line">esxcli network nic ring current set -n vmnic1 -r 4096 -t 4096</span><br></pre></td></tr></table></figure>
+<p>调整完重启主机. 持续运行半年没再出现过类似状况, 至此问题解决.</p>
+]]></content>
+      <categories>
+        <category>VMware</category>
+      </categories>
+      <tags>
+        <tag>VMware</tag>
+      </tags>
+  </entry>
 </search>
