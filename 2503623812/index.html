@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"notes.yuanlinios.me","root":"/","images":"/images","scheme":"Mist","darkmode":false,"version":"8.8.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"disqus","storage":true,"lazyload":false,"nav":{"disqus":{"text":"Load Disqus","order":-1}},"activeClass":"disqus"},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="使用手工方式部署单节点 OKD (SNO) 4.12, 记录其中的坑和解决方法. 前文介绍的 assisted installer 方式比较简单, 但是需要用户的交互. 这里虽然是手工方式, 但是很容易转化为自动化流水线. 使用的 OKD 版本依然是 4.12.0-0.okd-2023-04-01-051724">
+<meta property="og:type" content="article">
+<meta property="og:title" content="单节点 OKD4(SNO) - 手工方式">
+<meta property="og:url" content="https://notes.yuanlinios.me/2503623812/index.html">
+<meta property="og:site_name" content="Lin&#39;s Notes">
+<meta property="og:description" content="使用手工方式部署单节点 OKD (SNO) 4.12, 记录其中的坑和解决方法. 前文介绍的 assisted installer 方式比较简单, 但是需要用户的交互. 这里虽然是手工方式, 但是很容易转化为自动化流水线. 使用的 OKD 版本依然是 4.12.0-0.okd-2023-04-01-051724">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://notes.yuanlinios.me/2503623812/manual-sno-done.PNG">
+<meta property="article:published_time" content="2023-07-11T08:06:08.000Z">
+<meta property="article:modified_time" content="2023-07-11T08:06:08.000Z">
+<meta property="article:author" content="L. Yuan">
+<meta property="article:tag" content="Openshift">
+<meta property="article:tag" content="OKD4">
+<meta property="article:tag" content="SNO">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://notes.yuanlinios.me/2503623812/manual-sno-done.PNG">
+
+
+<link rel="canonical" href="https://notes.yuanlinios.me/2503623812/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://notes.yuanlinios.me/2503623812/","path":"2503623812/","title":"单节点 OKD4(SNO) - 手工方式"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>单节点 OKD4(SNO) - 手工方式 | Lin's Notes</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?77c4a44880a67fc83e6b9db83fc1e8c8"></script>
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="Lin's Notes" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Lin's Notes</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">All About IT Infra and Cloud</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">19</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">10</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">20</span></a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80" placeholder="搜索..." spellcheck="false" type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9B%B4%E6%8E%A5%E4%BD%BF%E7%94%A8-ocp-%E6%96%87%E6%A1%A3%E4%BC%9A%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-number">1.</span> <span class="nav-text">直接使用 OCP 文档会遇到的问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#var-%E7%A9%BA%E9%97%B4%E4%B8%8D%E8%B6%B3"><span class="nav-number">1.1.</span> <span class="nav-text">&#x2F;var 空间不足</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%95%E5%9B%BE%E4%BF%AE%E6%94%B9-sysroot-%E5%8F%AA%E8%AF%BB%E5%88%86%E5%8C%BA"><span class="nav-number">1.2.</span> <span class="nav-text">试图修改 &#x2F;sysroot 只读分区</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#journal-%E6%A0%BC%E5%BC%8F%E4%B8%8D%E5%8C%B9%E9%85%8D"><span class="nav-number">1.3.</span> <span class="nav-text">Journal 格式不匹配</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95%E5%92%8C%E6%AD%A5%E9%AA%A4"><span class="nav-number">2.</span> <span class="nav-text">解决方法和步骤</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%87%86%E5%A4%87%E5%9F%BA%E7%A1%80%E8%AE%BE%E6%96%BD"><span class="nav-number">2.1.</span> <span class="nav-text">准备基础设施</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%87%86%E5%A4%87%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6"><span class="nav-number">2.2.</span> <span class="nav-text">准备二进制文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%94%9F%E6%88%90%E5%88%9D%E5%A7%8B%E7%9A%84-ignition-%E6%96%87%E4%BB%B6"><span class="nav-number">2.3.</span> <span class="nav-text">生成初始的 ignition 文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9A%E5%88%B6-ignition-%E6%96%87%E4%BB%B6"><span class="nav-number">2.4.</span> <span class="nav-text">定制 ignition 文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%94%9F%E6%88%90%E5%AE%9A%E5%88%B6%E9%95%9C%E5%83%8F"><span class="nav-number">2.5.</span> <span class="nav-text">生成定制镜像</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%8C%E6%88%90%E5%AE%89%E8%A3%85"><span class="nav-number">2.6.</span> <span class="nav-text">完成安装</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">3.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="L. Yuan" src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">L. Yuan</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">20</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/yuanlinios" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;yuanlinios" rel="external nofollow noopener noreferrer" target="_blank"><i class="github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yuanlinios@gmail.com" title="E-Mail → mailto:yuanlinios@gmail.com" rel="external nofollow noopener noreferrer" target="_blank"><i class="envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.linkedin.com/in/yuanlinios" title="Linkedin → https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;yuanlinios" rel="external nofollow noopener noreferrer" target="_blank"><i class="linkedin fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="cc-opacity" rel="external nofollow noopener noreferrer" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/2503623812/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="L. Yuan">
+      <meta itemprop="description" content>
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Lin's Notes">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          单节点 OKD4(SNO) - 手工方式
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-07-11 16:06:08" itemprop="dateCreated datePublished" datetime="2023-07-11T16:06:08+08:00">2023-07-11</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/RedHat/" itemprop="url" rel="index"><span itemprop="name">RedHat</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/RedHat/Openshift/" itemprop="url" rel="index"><span itemprop="name">Openshift</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2503623812/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2503623812/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>8.3k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>8 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>使用手工方式部署单节点 OKD (SNO) 4.12, 记录其中的坑和解决方法. 前文介绍的 assisted installer 方式比较简单, 但是需要用户的交互. 这里虽然是手工方式, 但是很容易转化为自动化流水线. 使用的 OKD 版本依然是 4.12.0-0.okd-2023-04-01-051724 <span id="more"></span></p>
+<h2 id="直接使用-ocp-文档会遇到的问题">直接使用 OCP 文档会遇到的问题</h2>
+<p>由于 rhcos 和 fedora coreos 的差异, 直接照搬 OCP 文档上创建内嵌 ignotion 文件的 ISO 来进行安装的方法会遇到各种各样的问题.</p>
+<h3 id="var-空间不足">/var 空间不足</h3>
+<p>如果使用文档中的最小规格 8 vCPU/16G RAM/120G Disk, 初次启动就会遇到下面的错误</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">journalctl -f -u bootkube.service</span><br><span class="line">...</span><br><span class="line">Jul 11 11:57:37 hdc-srv-1.int.vopsdev.com bootkube.sh[14907]: Error: writing blob: adding layer with blob <span class="string">&quot;sha256:a33a998036bf3429b7c0cdd5ae4a78921403f2b4dbedacb0da84559b5cc4156f&quot;</span>: processing tar file(write /var/lib/rpm/Packages: no space left on device): <span class="built_in">exit</span> status 1</span><br></pre></td></tr></table></figure>
+<p>查看空间使用量, 可以发现 <code>loop0</code> 设备只有 3.1G, 而 <code>/var</code> 目录挂载自 <code>loop0</code> <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">df -h</span><br><span class="line"></span><br><span class="line">Filesystem      Size  Used Avail Use% Mounted on</span><br><span class="line">devtmpfs        4.0M     0  4.0M   0% /dev</span><br><span class="line">tmpfs           7.9G   84K  7.9G   1% /dev/shm</span><br><span class="line">tmpfs           3.2G  3.1G   88M  98% /run</span><br><span class="line">/dev/sr0        746M  746M     0 100% /run/media/iso</span><br><span class="line">/dev/loop1      625M  625M     0 100% /sysroot</span><br><span class="line">/dev/loop0      3.1G  3.0G  129M  96% /run/ephemeral</span><br><span class="line">tmpfs           7.9G     0  7.9G   0% /tmp</span><br><span class="line">tmpfs           1.6G     0  1.6G   0% /run/user/1000</span><br><span class="line">overlay         3.1G  3.0G  129M  96% /var/lib/containers/storage/overlay/e78d92d6f79340cbc2bc7c1bc580d0f0d0c6cbb0101458b6725c450958eeb2e1/merged</span><br></pre></td></tr></table></figure></p>
+<p>通过这个 <a target="_blank" rel="external nofollow noopener noreferrer" href="https://github.com/coreos/fedora-coreos-tracker/issues/1344">fedora coreos issue 1344</a> 可以知道当前版本的 fedora coreos 默认使用内存总量的 20% 用于 <code>/run/ephemeral</code></p>
+<h3 id="试图修改-sysroot-只读分区">试图修改 /sysroot 只读分区</h3>
+<p>fedora coreos 其实是一个泛用的操作系统, 实际 OKD 安装过程中会使用其对应版本的 fedora-coreos 镜像内容 "替换" 掉原来的系统. <code>release-image-pivot</code> 服务进行 <code>rpm-ostree rebase</code> 时会出现下面的错误</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">journalctl -f -u release-image-pivot.service</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line">Jul 11 12:12:39 hdc-srv-1.int.vopsdev.com bootstrap-pivot.sh[1743]: ++ chmod 0644 /etc/containers/registries.conf</span><br><span class="line">Jul 11 12:12:39 hdc-srv-1.int.vopsdev.com bootstrap-pivot.sh[1743]: ++ rpm-ostree rebase --experimental ostree-unverified-registry:quay.io/openshift/okd-content@sha256:c858d7d2086ca4a7b3b340c2ea32b26b68967fb66b918f8ac027020ca18d5193</span><br><span class="line">Jul 11 12:12:39 hdc-srv-1.int.vopsdev.com bootstrap-pivot.sh[2793]: error: Remounting /sysroot read-write: Permission denied</span><br></pre></td></tr></table></figure>
+<p>而 <code>/sysroot</code> 来自 live ISO 的挂载, 不允许写入</p>
+<h3 id="journal-格式不匹配">Journal 格式不匹配</h3>
+<p>在安装的最后阶段 machine config operator 会因为 <code>journalctl</code> 无法识别日志文件而失败. 具体看这个 <a target="_blank" rel="external nofollow noopener noreferrer" href="https://github.com/okd-project/okd/issues/1607">OKD issue 1607</a></p>
+<h2 id="解决方法和步骤">解决方法和步骤</h2>
+<p>主要从 assisted installer 的安装脚本中借用一部分, 追加到 ignition 文件中, 可以解决上面的问题</p>
+<h3 id="准备基础设施">准备基础设施</h3>
+<p>本文将在 vSphere 8 环境安装 OKD 4.12 SNO.</p>
+<p>准备好必要的 DNS 条目. 这里将使用静态 IP 地址, 无需 DHCP <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">hdc-srv-1.int.vopsdev.com           A       192.168.11.71</span><br><span class="line">api.cls-sno-1.vopsdev.com           CNAME   hdc-srv-1.int.vopsdev.com</span><br><span class="line">api-int.cls-sno-1.vopsdev.com       CNAME   hdc-srv-1.int.vopsdev.com</span><br><span class="line">*.apps.cls-sno-1.vopsdev.com        CNAME   hdc-srv-1.int.vopsdev.com</span><br></pre></td></tr></table></figure></p>
+<h3 id="准备二进制文件">准备二进制文件</h3>
+<p>提取 <code>openshift-install</code> 并下载对应版本的 fedora coreos ISO.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">RELEASE_PATH=openshift/okd:4.12.0-0.okd-2023-04-01-051724</span><br><span class="line">oc adm release extract --tools quay.io/<span class="variable">$RELEASE_PATH</span></span><br><span class="line">tar xvf openshift-install-*.tar.gz</span><br><span class="line">ISO_URL=$(./openshift-install coreos print-stream-json | jq -r .architectures.x86_64.artifacts.metal.formats.iso.disk.location)</span><br><span class="line">curl -L <span class="variable">$ISO_URL</span> -o fedora-coreos-live.iso</span><br></pre></td></tr></table></figure>
+<p>同时准备后面会用到的 <a target="_blank" rel="external nofollow noopener noreferrer" href="https://github.com/coreos/butane/releases/download/v0.18.0/butane-x86_64-unknown-linux-gnu">butane</a> 和 <a target="_blank" rel="external nofollow noopener noreferrer" href="https://mirror.openshift.com/pub/openshift-v4/clients/coreos-installer/latest/coreos-installer">coreos-install</a></p>
+<h3 id="生成初始的-ignition-文件">生成初始的 ignition 文件</h3>
+<p>准备常规的 <code>install-config.yaml</code> <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">baseDomain:</span> <span class="string">vopsdev.com</span></span><br><span class="line"><span class="attr">compute:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">worker</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">0</span></span><br><span class="line"><span class="attr">controlPlane:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">master</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">cls-sno-1</span></span><br><span class="line"><span class="attr">networking:</span></span><br><span class="line">  <span class="attr">clusterNetwork:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">cidr:</span> <span class="number">10.128</span><span class="number">.0</span><span class="number">.0</span><span class="string">/14</span></span><br><span class="line">    <span class="attr">hostPrefix:</span> <span class="number">23</span></span><br><span class="line">  <span class="attr">machineNetwork:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">cidr:</span> <span class="number">192.168</span><span class="number">.11</span><span class="number">.0</span><span class="string">/24</span></span><br><span class="line">  <span class="attr">networkType:</span> <span class="string">OVNKubernetes</span></span><br><span class="line">  <span class="attr">serviceNetwork:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="number">172.30</span><span class="number">.0</span><span class="number">.0</span><span class="string">/16</span></span><br><span class="line"><span class="attr">platform:</span></span><br><span class="line">  <span class="attr">none:</span> &#123;&#125;</span><br><span class="line"><span class="attr">publish:</span> <span class="string">External</span></span><br><span class="line"><span class="attr">bootstrapInPlace:</span></span><br><span class="line">  <span class="attr">installationDisk:</span> <span class="string">/dev/sda</span></span><br><span class="line"><span class="attr">additionalTrustBundle:</span> <span class="string">XXX</span></span><br><span class="line"><span class="attr">pullSecret:</span> <span class="string">XXX</span></span><br><span class="line"><span class="attr">sshKey:</span> <span class="string">XXX</span></span><br></pre></td></tr></table></figure> 创建 ignition 文件, 复制一份出来, 后面会用到 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">mkdir assets</span><br><span class="line">cp install-config.yaml assets/</span><br><span class="line">./openshift-install --dir=assets create single-node-ignition-config</span><br><span class="line">cp assets/bootstrap-in-place-for-live-iso.ign sno.ign</span><br></pre></td></tr></table></figure></p>
+<h3 id="定制-ignition-文件">定制 ignition 文件</h3>
+<p>通过定制 ignition 文件来实现:</p>
+<ul>
+<li>添加 machine config 配置, 对 sno master 进行定制, 这里定制了 <code>/etc/chrony.conf</code> 并创建了一个一次性的服务 <code>systemd-clear-journal.service</code> 来清理 journal 文件, 解决上面 journal 格式不匹配的问题</li>
+<li>为 bootstrap 过程添加服务 <code>okd-overlay.service</code> 及其对应的脚本 <code>/usr/local/bin/okd-binaries.sh</code> 解决上面剩余的两个问题</li>
+</ul>
+<p>我们将使用 <code>butane</code> 工具来生成 machine config 的清单文件. 首先编写 butane 格式的 machine config 配置清单 <code>98-machine-config-maser-sno.bu</code> <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">variant:</span> <span class="string">openshift</span></span><br><span class="line"><span class="attr">version:</span> <span class="number">4.12</span><span class="number">.0</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">machineconfiguration.openshift.io/role:</span> <span class="string">master</span></span><br><span class="line">  <span class="attr">name:</span> <span class="number">98</span><span class="string">-master-sno</span></span><br><span class="line"><span class="attr">storage:</span></span><br><span class="line">  <span class="attr">files:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">/etc/chrony.conf</span></span><br><span class="line">    <span class="attr">mode:</span> <span class="number">0644</span></span><br><span class="line">    <span class="attr">overwrite:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">contents:</span></span><br><span class="line">      <span class="attr">inline:</span> <span class="string">|</span></span><br><span class="line"><span class="string">        server 1.ntp.svc.vopsdev.com iburst</span></span><br><span class="line"><span class="string">        server 2.ntp.svc.vopsdev.com iburst</span></span><br><span class="line"><span class="string">        driftfile /var/lib/chrony/drift</span></span><br><span class="line"><span class="string">        makestep 1.0 3</span></span><br><span class="line"><span class="string">        rtcsync</span></span><br><span class="line"><span class="string">        logdir /var/log/chrony</span></span><br><span class="line"><span class="string"></span><span class="attr">systemd:</span></span><br><span class="line">  <span class="attr">units:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">contents:</span> <span class="string">|</span></span><br><span class="line"><span class="string">      [Unit]</span></span><br><span class="line"><span class="string">      Description=Clear Journal to Remove Corrupt File</span></span><br><span class="line"><span class="string">      DefaultDependencies=no</span></span><br><span class="line"><span class="string">      After=kubelet.service</span></span><br><span class="line"><span class="string"></span></span><br><span class="line">      [<span class="string">Service</span>]</span><br><span class="line">      <span class="string">Type=oneshot</span></span><br><span class="line">      <span class="string">RemainAfterExit=yes</span></span><br><span class="line">      <span class="string">ExecStart=bash</span> <span class="string">-c</span> <span class="string">&quot;/usr/bin/journalctl --rotate &amp;&amp; /usr/bin/journalctl --vacuum-time=1s&quot;</span></span><br><span class="line">      <span class="string">TimeoutSec=0</span></span><br><span class="line"></span><br><span class="line">      [<span class="string">Install</span>]</span><br><span class="line">      <span class="string">WantedBy=multi-user.target</span></span><br><span class="line">    <span class="attr">enabled:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">systemd-clear-journal.service</span></span><br><span class="line"></span><br></pre></td></tr></table></figure> 使用 <code>butane</code> 生成 machine config 的 yaml 清单 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">butane 98-machine-config-maser-sno.bu -o 98-machine-config-maser-sno.yaml</span><br></pre></td></tr></table></figure></p>
+<p><code>okd-binaries.sh</code> 脚本的内容如下: <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/env bash</span></span><br><span class="line"><span class="built_in">set</span> -eux</span><br><span class="line"><span class="comment"># Fetch an image with OKD rpms</span></span><br><span class="line">RPMS_IMAGE=<span class="string">&quot;quay.io/openshift/okd-content@sha256:10c02c766abb34085023df151e7855a848fa5e212e21a4e8163e7aae3d1e9651&quot;</span></span><br><span class="line"><span class="keyword">while</span> ! podman pull --quiet <span class="string">&quot;<span class="variable">$&#123;RPMS_IMAGE&#125;</span>&quot;</span></span><br><span class="line"><span class="keyword">do</span></span><br><span class="line">    <span class="built_in">echo</span> <span class="string">&quot;Pull failed. Retrying <span class="variable">$&#123;RPMS_IMAGE&#125;</span>...&quot;</span></span><br><span class="line">    sleep 5</span><br><span class="line"><span class="keyword">done</span></span><br><span class="line">mnt=$(podman image mount <span class="string">&quot;<span class="variable">$&#123;RPMS_IMAGE&#125;</span>&quot;</span>)</span><br><span class="line"><span class="comment"># Install RPMs in overlayed FS</span></span><br><span class="line">mkdir /tmp/rpms</span><br><span class="line">cp -rvf <span class="variable">$&#123;mnt&#125;</span>/rpms/* /tmp/rpms</span><br><span class="line"><span class="comment"># If RPMs image contants manifests these need to be copied as well</span></span><br><span class="line">mkdir -p /opt/openshift/openshift</span><br><span class="line">cp -rvf <span class="variable">$&#123;mnt&#125;</span>/manifests/* /opt/openshift/openshift || <span class="literal">true</span></span><br><span class="line">tmpd=$(mktemp -d)</span><br><span class="line">mkdir <span class="variable">$&#123;tmpd&#125;</span>/&#123;upper,work&#125;</span><br><span class="line">mount -t overlay -o lowerdir=/usr,upperdir=<span class="variable">$&#123;tmpd&#125;</span>/upper,workdir=<span class="variable">$&#123;tmpd&#125;</span>/work overlay /usr</span><br><span class="line">rpm -Uvh /tmp/rpms/*</span><br><span class="line">podman rmi -f <span class="string">&quot;<span class="variable">$&#123;RPMS_IMAGE&#125;</span>&quot;</span></span><br><span class="line"><span class="comment"># Symlink kubelet pull secret</span></span><br><span class="line">mkdir -p /var/lib/kubelet</span><br><span class="line">ln -s /root/.docker/config.json /var/lib/kubelet/config.json</span><br><span class="line"><span class="comment"># Expand /var to 6G if necessary</span></span><br><span class="line"><span class="keyword">if</span> (( $(<span class="built_in">stat</span> -c%s /run/ephemeral.xfsloop) &gt; 6*1024*1024*1024 )); <span class="keyword">then</span></span><br><span class="line">  <span class="built_in">exit</span> 0</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line">/bin/truncate -s 6G /run/ephemeral.xfsloop</span><br><span class="line">losetup -c /dev/loop0</span><br><span class="line">xfs_growfs /var</span><br><span class="line">mount -o remount,size=6G /run</span><br></pre></td></tr></table></figure></p>
+<p>这个脚本来自 assisted installer 的 bootstrap 过程. 其中 <code>RPMS_IMAGE</code> 变量的 sha256 值对应 <code>okd-rpms</code> 镜像, 可以通过下面命令得到 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">oc adm release info quay.io/$RELEASE_PATH | grep okd-rpms</span><br></pre></td></tr></table></figure></p>
+<p>用于生成整合 ignition 的 butane 格式清单文件 <code>customize-embedded.bu</code> <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">variant:</span> <span class="string">fcos</span></span><br><span class="line"><span class="attr">version:</span> <span class="number">1.4</span><span class="number">.0</span></span><br><span class="line"><span class="attr">ignition:</span></span><br><span class="line">  <span class="attr">config:</span></span><br><span class="line">    <span class="attr">merge:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">local:</span> <span class="string">sno.ign</span></span><br><span class="line"><span class="attr">storage:</span></span><br><span class="line">  <span class="attr">files:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">/opt/openshift/openshift/98_openshift-machineconfig_98-master-config-sno.yaml</span></span><br><span class="line">    <span class="attr">mode:</span> <span class="number">0644</span></span><br><span class="line">    <span class="attr">overwrite:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">contents:</span></span><br><span class="line">      <span class="attr">local:</span> <span class="number">98</span><span class="string">-machine-config-maser-sno.yaml</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">/usr/local/bin/okd-binaries.sh</span></span><br><span class="line">    <span class="attr">mode:</span> <span class="number">0755</span></span><br><span class="line">    <span class="attr">overwrite:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">contents:</span></span><br><span class="line">      <span class="attr">local:</span> <span class="string">okd-binaries.sh</span></span><br><span class="line"><span class="attr">systemd:</span></span><br><span class="line">  <span class="attr">units:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">contents:</span> <span class="string">|</span></span><br><span class="line"><span class="string">      [Service]</span></span><br><span class="line"><span class="string">      Type=oneshot</span></span><br><span class="line"><span class="string">      ExecStart=/usr/local/bin/okd-binaries.sh</span></span><br><span class="line"><span class="string"></span></span><br><span class="line">      [<span class="string">Unit</span>]</span><br><span class="line">      <span class="string">Wants=network-online.target</span></span><br><span class="line">      <span class="string">After=network-online.target</span></span><br><span class="line"></span><br><span class="line">      [<span class="string">Install</span>]</span><br><span class="line">      <span class="string">WantedBy=multi-user.target</span></span><br><span class="line">    <span class="attr">enabled:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">okd-overlay.service</span></span><br></pre></td></tr></table></figure></p>
+<p>使用下面的命令生成整合的 ignition 文件 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">butane -d . customize-embedded.bu -o boot.ign</span><br></pre></td></tr></table></figure></p>
+<h3 id="生成定制镜像">生成定制镜像</h3>
+<p>使用 <code>coreos-installer</code> 命令将 ignition 文件内嵌入 ISO, 同时通过内核参数设置 bootstrap 过程的静态网络配置. 这个网络配置会被复制到最终的 machine config 中 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">IP=192.168.11.71</span><br><span class="line">GATEWAY=192.168.11.254</span><br><span class="line">NETMASK=255.255.255.0</span><br><span class="line">HOSTNAME=hdc-srv-1.int.vopsdev.com</span><br><span class="line">DNS=192.168.11.10</span><br><span class="line"></span><br><span class="line">./coreos-installer iso kargs modify -a <span class="string">&quot;rd.neednet=1 ip=<span class="variable">$&#123;IP&#125;</span>::<span class="variable">$&#123;GATEWAY&#125;</span>:<span class="variable">$&#123;NETMASK&#125;</span>:<span class="variable">$&#123;HOSTNAME&#125;</span>::none nameserver=<span class="variable">$&#123;DNS&#125;</span>&quot;</span> fedora-coreos-live.iso</span><br><span class="line">./coreos-installer iso ignition embed -<span class="keyword">fi</span> boot.ign fedora-coreos-live.iso</span><br></pre></td></tr></table></figure></p>
+<h3 id="完成安装">完成安装</h3>
+<p>将 ISO 挂载到虚拟机并启动, 登入后可以观察其 bootstrap 的过程 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">journalctl -f -u okd-overlay.service -u release-image.service -u bootkube.service -u release-image-pivot.service -u install-to-disk.service</span><br></pre></td></tr></table></figure></p>
+<p>中间会经过几次重启, 整个过程大约半小时, 最终可以成功安装 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">./openshift-install --dir=assets wait-for bootstrap-complete</span><br><span class="line">INFO Waiting up to 20m0s (until 10:46PM) for the Kubernetes API at https://api.cls-sno-1.vopsdev.com:6443...</span><br><span class="line">INFO API v1.25.0-2786+eab9cc98fe4c00-dirty up</span><br><span class="line">INFO Waiting up to 30m0s (until 10:56PM) for bootstrapping to complete...</span><br><span class="line">INFO It is now safe to remove the bootstrap resources</span><br><span class="line">INFO Time elapsed: 0s</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">./openshift-install --dir=assets wait-for install-complete</span><br><span class="line">INFO Waiting up to 40m0s (until 11:06PM) for the cluster at https://api.cls-sno-1.vopsdev.com:6443 to initialize...</span><br><span class="line">INFO Checking to see if there is a route at openshift-console/console...</span><br><span class="line">INFO Install complete!</span><br><span class="line">INFO To access the cluster as the system:admin user when using &#x27;oc&#x27;, run &#x27;export KUBECONFIG=/home/admin/workspace/okd-sn-4.12/assets/auth/kubeconfig&#x27;</span><br><span class="line">INFO Access the OpenShift web-console here: https://console-openshift-console.apps.cls-sno-1.vopsdev.com</span><br><span class="line">INFO Login to the console with user: &quot;kubeadmin&quot;, and password: &quot;xxxxx-xxxxx-xxxxx-xxxxx&quot;</span><br><span class="line">INFO Time elapsed: 0s</span><br></pre></td></tr></table></figure></p>
+<p><img src="manual-sno-done.PNG"></p>
+<h2 id="参考资料">参考资料</h2>
+<ul>
+<li>https://github.com/coreos/fedora-coreos-tracker/issues/1344</li>
+<li>https://github.com/okd-project/okd/issues/1607</li>
+<li>https://upstreamwithoutapaddle.com/blog%20post/2023/05/21/Pull-Youself-Up-By-Your-Bootstraps.html</li>
+<li>https://coreos.github.io/butane/</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>L. Yuan
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://notes.yuanlinios.me/2503623812/" title="单节点 OKD4(SNO) - 手工方式">https://notes.yuanlinios.me/2503623812/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="external nofollow noopener noreferrer" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Openshift/" rel="tag"># Openshift</a>
+              <a href="/tags/OKD4/" rel="tag"># OKD4</a>
+              <a href="/tags/SNO/" rel="tag"># SNO</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/3946862006/" rel="prev" title="单节点 OKD4(SNO) - Assisted Installer">
+                  <i class="fa fa-chevron-left"></i> 单节点 OKD4(SNO) - Assisted Installer
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    
+  <div class="comments" id="disqus_thread">
+    <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+  </div>
+  
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="id-card-o"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">L. Yuan</span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="external nofollow noopener noreferrer" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" rel="external nofollow noopener noreferrer" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+<script class="next-config" data-name="disqus" type="application/json">{"enable":true,"shortname":"yuanlinios-notes","count":true,"i18n":{"disqus":"disqus"}}</script>
+<script src="/js/third-party/comments/disqus.js"></script>
+
+</body>
+</html>
