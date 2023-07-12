@@ -191,11 +191,12 @@
 <p>点击 Download Discovery ISO 下载下来. 到 vSphere 上为虚拟机挂载该 ISO, 设置启动时连接, 然后启动该虚拟机. 等待一段时间后, 该节点会出现在 Host Inventory 中 <img src="assisted-host-discovery.PNG" /></p>
 <p>Storage 页面和 Networking 页面按需调整, 否则直接 Next. 到 Review and create 页面, 确认信息无误后 Install cluster 开始安装. <img src="assisted-installation-progress.PNG" /></p>
 <p>然后等待安装结束, 大约需要半小时. <img src="assisted-installation-done.PNG" /></p>
-<p>至此单节点 OKD 安装完成, 可以根据提示进行访问. 清理 assisted-service: <code>make clear-all</code></p>
+<p>至此单节点 OKD 安装完成, 可以根据提示进行访问.</p>
+<p>清理 assisted-service: <code>make clear-all</code></p>
 <h2 id="参考资料">参考资料</h2>
 <ul>
-<li>https://docs.openshift.com/container-platform/4.13/installing/installing_sno/install-sno-preparing-to-install-sno.html</li>
-<li>https://vrutkovs.eu/posts/okd-disconnected-assisted/</li>
+<li><a href="https://docs.openshift.com/container-platform/4.13/installing/installing_sno/install-sno-preparing-to-install-sno.html" class="uri">https://docs.openshift.com/container-platform/4.13/installing/installing_sno/install-sno-preparing-to-install-sno.html</a></li>
+<li><a href="https://vrutkovs.eu/posts/okd-disconnected-assisted/" class="uri">https://vrutkovs.eu/posts/okd-disconnected-assisted/</a></li>
 </ul>
 ]]></content>
       <categories>
@@ -255,7 +256,7 @@
 <p><img src="manual-sno-done.PNG" /></p>
 <h2 id="参考资料">参考资料</h2>
 <ul>
-<li>https://github.com/coreos/fedora-coreos-tracker/issues/1344</li>
+<li><a href="https://github.com/coreos/fedora-coreos-tracker/issues/1344" class="uri">https://github.com/coreos/fedora-coreos-tracker/issues/1344</a></li>
 <li>https://github.com/okd-project/okd/issues/1607</li>
 <li>https://upstreamwithoutapaddle.com/blog%20post/2023/05/21/Pull-Youself-Up-By-Your-Bootstraps.html</li>
 <li>https://coreos.github.io/butane/</li>
