@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"notes.yuanlinios.me","root":"/","images":"/images","scheme":"Mist","darkmode":false,"version":"8.8.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"disqus","storage":true,"lazyload":false,"nav":{"disqus":{"text":"Load Disqus","order":-1}},"activeClass":"disqus"},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="AWS Control Tower 定制化有 CfCT (customization for control tower) 和 AFT (Account Factory for Terraform) 的方式. 这里将介绍如何使用 CfCT 方式为 Control Tower Landing Zone 添加资源.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从 AWS Landing Zone 迁移至 Control Tower 2: 重建定制资源">
+<meta property="og:url" content="https://notes.yuanlinios.me/3318020405/index.html">
+<meta property="og:site_name" content="Lin&#39;s Notes">
+<meta property="og:description" content="AWS Control Tower 定制化有 CfCT (customization for control tower) 和 AFT (Account Factory for Terraform) 的方式. 这里将介绍如何使用 CfCT 方式为 Control Tower Landing Zone 添加资源.">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://notes.yuanlinios.me/3318020405/customizations-for-aws-control-tower-architecture-diagram.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3318020405/cfct-pipeline.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3318020405/cfct-custom-preventive-control.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3318020405/cfct-stacksets.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3318020405/cfct-custom-detective-control.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3318020405/cfct-custom-resource.png">
+<meta property="article:published_time" content="2023-09-16T01:33:30.000Z">
+<meta property="article:modified_time" content="2023-09-16T01:33:30.000Z">
+<meta property="article:author" content="L. Yuan">
+<meta property="article:tag" content="AWS">
+<meta property="article:tag" content="Landing Zone">
+<meta property="article:tag" content="Control Tower">
+<meta property="article:tag" content="CfCT">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://notes.yuanlinios.me/3318020405/customizations-for-aws-control-tower-architecture-diagram.png">
+
+
+<link rel="canonical" href="https://notes.yuanlinios.me/3318020405/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://notes.yuanlinios.me/3318020405/","path":"3318020405/","title":"从 AWS Landing Zone 迁移至 Control Tower 2: 重建定制资源"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>从 AWS Landing Zone 迁移至 Control Tower 2: 重建定制资源 | Lin's Notes</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?77c4a44880a67fc83e6b9db83fc1e8c8"></script>
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="Lin's Notes" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Lin's Notes</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">All About IT Infra and Cloud</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">21</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">11</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">22</span></a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80" placeholder="搜索..." spellcheck="false" type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%B9%E6%AF%94-cfct-%E5%92%8C-alz-%E8%87%AA%E5%AE%9A%E4%B9%89%E5%9F%BA%E7%BA%BF%E8%B5%84%E6%BA%90"><span class="nav-number">1.</span> <span class="nav-text">对比 CfCT 和 ALZ 自定义基线资源</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%83%A8%E7%BD%B2-customizations-for-aws-control-tower-%E6%A8%A1%E6%9D%BF"><span class="nav-number">2.</span> <span class="nav-text">部署 customizations-for-aws-control-tower 模板</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%96%E5%86%99%E5%B9%B6%E6%8F%90%E4%BA%A4%E8%B5%84%E6%BA%90%E5%AE%9A%E4%B9%89%E6%B8%85%E5%8D%95"><span class="nav-number">3.</span> <span class="nav-text">编写并提交资源定义清单</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95-cfct-%E5%AE%9A%E5%88%B6%E6%B5%81%E6%B0%B4%E7%BA%BF%E5%92%8C%E8%B5%84%E6%BA%90%E5%8F%AF%E7%94%A8%E6%80%A7"><span class="nav-number">4.</span> <span class="nav-text">测试 CfCT 定制流水线和资源可用性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="L. Yuan" src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">L. Yuan</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">22</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">21</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/yuanlinios" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;yuanlinios" rel="external nofollow noopener noreferrer" target="_blank"><i class="github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yuanlinios@gmail.com" title="E-Mail → mailto:yuanlinios@gmail.com" rel="external nofollow noopener noreferrer" target="_blank"><i class="envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.linkedin.com/in/yuanlinios" title="Linkedin → https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;yuanlinios" rel="external nofollow noopener noreferrer" target="_blank"><i class="linkedin fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="cc-opacity" rel="external nofollow noopener noreferrer" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/3318020405/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="L. Yuan">
+      <meta itemprop="description" content>
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Lin's Notes">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          从 AWS Landing Zone 迁移至 Control Tower 2: 重建定制资源
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-09-16 09:33:30" itemprop="dateCreated datePublished" datetime="2023-09-16T09:33:30+08:00">2023-09-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/AWS/" itemprop="url" rel="index"><span itemprop="name">AWS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/AWS/Landing-Zone/" itemprop="url" rel="index"><span itemprop="name">Landing Zone</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/AWS/Landing-Zone/Control-Tower/" itemprop="url" rel="index"><span itemprop="name">Control Tower</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/3318020405/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="3318020405/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>5.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>5 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>AWS Control Tower 定制化有 CfCT (customization for control tower) 和 AFT (Account Factory for Terraform) 的方式. 这里将介绍如何使用 CfCT 方式为 Control Tower Landing Zone 添加资源.</p>
+<span id="more"></span>
+<h2 id="对比-cfct-和-alz-自定义基线资源">对比 CfCT 和 ALZ 自定义基线资源</h2>
+<p>通过 CfCT 可以为 Control Tower Landing Zone 添加 preventive/detective control 和其他资源. 其中 preventive control 通过 service control policy 的 json 来定义. 而 detective control 和其他资源则通过 cloudformation stackset 来定义.</p>
+<div class="note info"><p>Control Tower 一共有三种 control: preventive control 由 service control policy 实现, detective control 由 config rule 实现, proactive control 由 cloudformation hook 实现.</p>
+</div>
+<p>CfCT 定制化配置的目录结构如下: <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">.</span><br><span class="line">├── manifest.yaml       # tempates 的输入参数直接写在这里, 不再需要 parameters 目录了</span><br><span class="line">├── policies/           # SCP policy jsons</span><br><span class="line">│    ├── xxx.json       </span><br><span class="line">│    └── yyy.json</span><br><span class="line">└── templates/          # cloudformation stacksets</span><br><span class="line">    ├── aaa.template 		    </span><br><span class="line">    └── bbb.template</span><br></pre></td></tr></table></figure></p>
+<p>如果熟悉 AWS Landing Zone 的定制化配置, 可以发现这个目录结构几乎完全一致. ALZ 的 stackset 输入参数需要写入 json 文件放到一个单独的 parameters 目录结构中. 而 CfCT 简化了这部分, 可以将输入参数直接写在 manifest.yaml 中, 不再需要 parameters 目录.</p>
+<p>下图来自 AWS CfCT 官方文档</p>
+<p><img src="customizations-for-aws-control-tower-architecture-diagram.png"></p>
+<p>从这里也可以看到其基本架构/实现原理和 ALZ 也是类似, 都是通过 codepipeline 触发 step functions 创建 stackset 或者 scp.</p>
+<h2 id="部署-customizations-for-aws-control-tower-模板">部署 customizations-for-aws-control-tower 模板</h2>
+<p>下载 <a target="_blank" rel="external nofollow noopener noreferrer" href="https://github.com/aws-solutions/aws-control-tower-customizations/blob/main/customizations-for-aws-control-tower.template">customizations-for-aws-control-tower.template</a>, 使用这个模板文件创建 cloudformation stack, 来生成 CfCT 所需要的基础资源:</p>
+<ul>
+<li>codebuild</li>
+<li>codepipeline</li>
+<li>event bridge rule</li>
+<li>lambda</li>
+<li>sqs queue</li>
+<li>s3 bucket</li>
+<li>step function</li>
+</ul>
+<p>输入参数中将 AWS CodePipeline Source 从默认的 AWS S3 改为 AWS CodeCommit, 使得将来可以通过配置代码的变更来触发流水线.</p>
+<h2 id="编写并提交资源定义清单">编写并提交资源定义清单</h2>
+<p>从 AWS Codecommit 中将 custom-control-tower-configuration 项目 clone 下来, 添加自定义配置. 这里用一个简单的例子示例如何添加 preventive control + detective control + IAM role 资源.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> custom-control-tower-configuration</span><br><span class="line">tree .</span><br><span class="line"></span><br><span class="line">.</span><br><span class="line">├── manifest.yaml</span><br><span class="line">├── policies</span><br><span class="line">│   └── preventive-guardrails.json</span><br><span class="line">└── templates</span><br><span class="line">    ├── access-keys-rotated.template</span><br><span class="line">    └── describe-regions-iam-role.template</span><br></pre></td></tr></table></figure>
+<p><code>manifest.yaml</code> 文件内容 <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">region:</span> <span class="string">us-west-2</span></span><br><span class="line"><span class="attr">version:</span> <span class="number">2021-03-15</span></span><br><span class="line"></span><br><span class="line"><span class="attr">resources:</span></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">test-preventive-guardrails</span></span><br><span class="line">  <span class="attr">description:</span> <span class="string">Prevent</span> <span class="string">deleting</span> <span class="string">or</span> <span class="string">disabling</span> <span class="string">resources</span> <span class="string">in</span> <span class="string">member</span> <span class="string">accounts</span></span><br><span class="line">  <span class="attr">resource_file:</span> <span class="string">policies/preventive-guardrails.json</span></span><br><span class="line">  <span class="attr">deploy_method:</span> <span class="string">scp</span></span><br><span class="line">  <span class="attr">deployment_targets:</span></span><br><span class="line">    <span class="attr">organizational_units:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">vopsdev-landing-zone:department</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">vopsdev-landing-zone:production</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">vopsdev-landing-zone:test</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">create-iam-role</span></span><br><span class="line">  <span class="attr">resource_file:</span> <span class="string">templates/describe-regions-iam-role.template</span></span><br><span class="line">  <span class="attr">deploy_method:</span> <span class="string">stack_set</span></span><br><span class="line">  <span class="attr">deployment_targets:</span></span><br><span class="line">    <span class="attr">organizational_units:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">vopsdev-landing-zone:department</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">vopsdev-landing-zone:production</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">vopsdev-landing-zone:test</span></span><br><span class="line">  <span class="attr">regions:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">us-west-2</span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> <span class="attr">name:</span> <span class="string">rotate-access-keys-guardrail</span></span><br><span class="line">  <span class="attr">resource_file:</span> <span class="string">templates/access-keys-rotated.template</span></span><br><span class="line">  <span class="attr">parameters:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="attr">parameter_key:</span> <span class="string">maxAccessKeyAge</span></span><br><span class="line">    <span class="attr">parameter_value:</span> <span class="string">&#x27;24&#x27;</span></span><br><span class="line">  <span class="attr">deploy_method:</span> <span class="string">stack_set</span></span><br><span class="line">  <span class="attr">deployment_targets:</span></span><br><span class="line">    <span class="attr">organizational_units:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">vopsdev-landing-zone:department</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">vopsdev-landing-zone:production</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">vopsdev-landing-zone:test</span></span><br><span class="line">  <span class="attr">regions:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">us-west-2</span></span><br></pre></td></tr></table></figure> 其结构和 ALZ manifest.yaml 的 baseline_resources 部分很相似</p>
+<ul>
+<li>各个资源会进一步使用 resource_file 引用其定义清单文件: scp 定义保存在 policies 目录下, stackset 保存在 templates 目录下. 实际上 resource_file 还可以引用保存在 s3 上的文件.</li>
+<li>deploy method 有 scp 和 stackset 两种. preventive control 使用 scp, detective control 和其他资源使用 stackset</li>
+<li>deoployment_targets 除了指定 organizational_units 外还可以指定 accounts</li>
+<li>region 指定 stackset 资源需要往那些 region 创建 stack instance. 对于全局资源, 例如 IAM role, 只需要在 home region 创建.</li>
+</ul>
+<p><code>policies/preventive-guardrails.json</code> 是一个 SCP 的 json 定义文件. 它将创建用户定制的 preventive control 来阻止对某些资源的特定操作: <figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">&quot;Version&quot;</span>: <span class="string">&quot;2012-10-17&quot;</span>,</span><br><span class="line">  <span class="attr">&quot;Statement&quot;</span>: [</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Sid&quot;</span>: <span class="string">&quot;GuardPutAccountPublicAccessBlock&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Effect&quot;</span>: <span class="string">&quot;Deny&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Action&quot;</span>: <span class="string">&quot;s3:PutAccountPublicAccessBlock&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Resource&quot;</span>: <span class="string">&quot;arn:aws:s3:::*&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Sid&quot;</span>: <span class="string">&quot;GuardEMRPutBlockPublicAccess&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Effect&quot;</span>: <span class="string">&quot;Deny&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Action&quot;</span>: <span class="string">&quot;elasticmapreduce:PutBlockPublicAccessConfiguration&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Resource&quot;</span>: <span class="string">&quot;*&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Sid&quot;</span>: <span class="string">&quot;GuardGlacierDeletion&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Effect&quot;</span>: <span class="string">&quot;Deny&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Action&quot;</span>: [</span><br><span class="line">        <span class="string">&quot;glacier:DeleteArchive&quot;</span>,</span><br><span class="line">        <span class="string">&quot;glacier:DeleteVault&quot;</span></span><br><span class="line">      ],</span><br><span class="line">      <span class="attr">&quot;Resource&quot;</span>: <span class="string">&quot;arn:aws:glacier:*:*:vaults/*&quot;</span></span><br><span class="line">    &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">&quot;Sid&quot;</span>: <span class="string">&quot;GuardKMSActions&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Effect&quot;</span>: <span class="string">&quot;Deny&quot;</span>,</span><br><span class="line">      <span class="attr">&quot;Action&quot;</span>: [</span><br><span class="line">        <span class="string">&quot;kms:DeleteAlias&quot;</span>,</span><br><span class="line">        <span class="string">&quot;kms:DeleteImportedKeyMaterial&quot;</span>,</span><br><span class="line">        <span class="string">&quot;kms:ScheduleKeyDeletion&quot;</span></span><br><span class="line">      ],</span><br><span class="line">      <span class="attr">&quot;Resource&quot;</span>: <span class="string">&quot;*&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">  ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p><code>templates/access-keys-rotated.template</code> 是一个 stackset 定义文件. 它将创建用户定制的 detective control (即 config rule) 来检查未定期轮滚的密钥: <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">---</span></span><br><span class="line"><span class="attr">AWSTemplateFormatVersion:</span> <span class="string">&#x27;2010-09-09&#x27;</span></span><br><span class="line"><span class="attr">Description:</span> <span class="string">Checks</span> <span class="string">whether</span> <span class="string">the</span> <span class="string">active</span> <span class="string">access</span> <span class="string">keys</span> <span class="string">are</span> <span class="string">rotated</span> <span class="string">within</span> <span class="string">the</span> <span class="string">number</span> <span class="string">of</span> <span class="string">days</span> <span class="string">specified</span> <span class="string">in</span> <span class="string">maxAccessKeyAge.</span></span><br><span class="line"><span class="attr">Parameters:</span></span><br><span class="line">  <span class="attr">maxAccessKeyAge:</span></span><br><span class="line">    <span class="attr">Type:</span> <span class="string">&#x27;String&#x27;</span></span><br><span class="line">    <span class="attr">Description:</span> <span class="string">&#x27;Maximum number of days within which the access keys must be rotated. The default value is 90 days.&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="attr">Resources:</span></span><br><span class="line">  <span class="attr">CustomConfigRule:</span></span><br><span class="line">    <span class="attr">Type:</span> <span class="string">AWS::Config::ConfigRule</span></span><br><span class="line">    <span class="attr">Properties:</span></span><br><span class="line">      <span class="attr">ConfigRuleName:</span> <span class="string">ACCESS_KEYS_ROTATED</span></span><br><span class="line">      <span class="attr">Description:</span> <span class="string">Custom</span> <span class="string">Config</span> <span class="string">Rule</span> <span class="bullet">-</span> <span class="string">Checks</span> <span class="string">whether</span> <span class="string">the</span> <span class="string">active</span> <span class="string">access</span> <span class="string">keys</span> <span class="string">are</span> <span class="string">rotated</span> <span class="string">within</span> <span class="string">the</span> <span class="string">number</span> <span class="string">of</span> <span class="string">days</span> <span class="string">specified</span> <span class="string">in</span> <span class="string">maxAccessKeyAge</span></span><br><span class="line">      <span class="attr">InputParameters:</span></span><br><span class="line">        <span class="attr">maxAccessKeyAge :</span> <span class="type">!Ref</span> <span class="string">maxAccessKeyAge</span></span><br><span class="line">      <span class="attr">Source:</span></span><br><span class="line">        <span class="attr">Owner:</span> <span class="string">AWS</span></span><br><span class="line">        <span class="attr">SourceIdentifier:</span> <span class="string">ACCESS_KEYS_ROTATED</span></span><br><span class="line">      <span class="attr">Scope:</span></span><br><span class="line">        <span class="attr">ComplianceResourceTypes:</span> []</span><br></pre></td></tr></table></figure></p>
+<p><code>templates/describe-regions-iam-role.template</code> 是一个 stackset 定义文件. 它将创建一个定制资源 (IAM role): <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">Resources:</span></span><br><span class="line">  <span class="attr">TestLambdaRole:</span></span><br><span class="line">    <span class="attr">Type:</span> <span class="string">AWS::IAM::Role</span></span><br><span class="line">    <span class="attr">Metadata:</span></span><br><span class="line">      <span class="attr">cfn_nag:</span></span><br><span class="line">        <span class="attr">rules_to_suppress:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">W28</span></span><br><span class="line">            <span class="attr">reason:</span> <span class="string">&quot;for demo&quot;</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">F3</span></span><br><span class="line">            <span class="attr">reason:</span> <span class="string">&quot;for demo&quot;</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">id:</span> <span class="string">W11</span></span><br><span class="line">            <span class="attr">reason:</span> <span class="string">&quot;for demo&quot;</span></span><br><span class="line">    <span class="attr">Properties:</span></span><br><span class="line">      <span class="attr">AssumeRolePolicyDocument:</span></span><br><span class="line">        <span class="attr">Version:</span> <span class="string">&#x27;2012-10-17&#x27;</span></span><br><span class="line">        <span class="attr">Statement:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">Effect:</span> <span class="string">Allow</span></span><br><span class="line">            <span class="attr">Principal:</span></span><br><span class="line">              <span class="attr">Service:</span> <span class="string">lambda.amazonaws.com</span></span><br><span class="line">            <span class="attr">Action:</span> <span class="string">sts:AssumeRole</span></span><br><span class="line">      <span class="attr">Path:</span> <span class="string">/</span></span><br><span class="line">      <span class="attr">RoleName:</span> <span class="string">TestLambdaRole</span></span><br><span class="line">      <span class="attr">Policies:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">PolicyName:</span> <span class="string">DescribeRegions</span></span><br><span class="line">          <span class="attr">PolicyDocument:</span></span><br><span class="line">            <span class="attr">Version:</span> <span class="string">&#x27;2012-10-17&#x27;</span></span><br><span class="line">            <span class="attr">Statement:</span></span><br><span class="line">              <span class="bullet">-</span> <span class="attr">Effect:</span> <span class="string">Allow</span></span><br><span class="line">                <span class="attr">Action:</span></span><br><span class="line">                  <span class="bullet">-</span> <span class="string">ec2:DescribeRegions</span></span><br><span class="line">                <span class="attr">Resource:</span> <span class="string">&#x27;*&#x27;</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="测试-cfct-定制流水线和资源可用性">测试 CfCT 定制流水线和资源可用性</h2>
+<p>提交配置代码, 推送到 Codecommit 后即可触发 Custom-Control-Tower-CodePipeline 流水线. 等其执行成功:</p>
+<p><img src="cfct-pipeline.png"></p>
+<p>然后可以检查新定义的资源是否创建成功. 到 Organization 下指定的 OU 上检查定制 SCP:</p>
+<p><img src="cfct-custom-preventive-control.png"></p>
+<p>在 Cloudformation 中可以看到相关的 stacksets:</p>
+<p><img src="cfct-stacksets.png"></p>
+<p>到目标账户下查看定制的 config rule:</p>
+<p><img src="cfct-custom-detective-control.png"></p>
+<p>到目标账户下查看定制的 IAM role</p>
+<p><img src="cfct-custom-resource.png"></p>
+<h2 id="参考">参考</h2>
+<ul>
+<li><a target="_blank" rel="external nofollow noopener noreferrer" href="https://docs.aws.amazon.com/controltower/latest/userguide/customize-landing-zone.html" class="uri">https://docs.aws.amazon.com/controltower/latest/userguide/customize-landing-zone.html</a></li>
+<li><a target="_blank" rel="external nofollow noopener noreferrer" href="https://catalog.workshops.aws/control-tower/en-US/customization/cfct" class="uri">https://catalog.workshops.aws/control-tower/en-US/customization/cfct</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>L. Yuan
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://notes.yuanlinios.me/3318020405/" title="从 AWS Landing Zone 迁移至 Control Tower 2: 重建定制资源">https://notes.yuanlinios.me/3318020405/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="external nofollow noopener noreferrer" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/AWS/" rel="tag"># AWS</a>
+              <a href="/tags/Landing-Zone/" rel="tag"># Landing Zone</a>
+              <a href="/tags/Control-Tower/" rel="tag"># Control Tower</a>
+              <a href="/tags/CfCT/" rel="tag"># CfCT</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2508560204/" rel="prev" title="从 AWS Landing Zone 迁移至 Control Tower 1: 规划和实施">
+                  <i class="fa fa-chevron-left"></i> 从 AWS Landing Zone 迁移至 Control Tower 1: 规划和实施
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    
+  <div class="comments" id="disqus_thread">
+    <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+  </div>
+  
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="id-card-o"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">L. Yuan</span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="external nofollow noopener noreferrer" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" rel="external nofollow noopener noreferrer" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+<script class="next-config" data-name="disqus" type="application/json">{"enable":true,"shortname":"yuanlinios-notes","count":true,"i18n":{"disqus":"disqus"}}</script>
+<script src="/js/third-party/comments/disqus.js"></script>
+
+</body>
+</html>

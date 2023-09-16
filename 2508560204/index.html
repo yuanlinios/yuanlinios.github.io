@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"notes.yuanlinios.me","root":"/","images":"/images","scheme":"Mist","darkmode":false,"version":"8.8.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"disqus","storage":true,"lazyload":false,"nav":{"disqus":{"text":"Load Disqus","order":-1}},"activeClass":"disqus"},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="AWS Landing Zone 方案已经进入长期维护期, 不会再引入任何新的功能. AWS 建议用户使用 Control Tower 方案来管理企业多账户环境. 本文将示例如何从现有的 Landing Zone 方案迁移至 Control Tower 并列举迁移中的注意事项">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从 AWS Landing Zone 迁移至 Control Tower 1: 规划和实施">
+<meta property="og:url" content="https://notes.yuanlinios.me/2508560204/index.html">
+<meta property="og:site_name" content="Lin&#39;s Notes">
+<meta property="og:description" content="AWS Landing Zone 方案已经进入长期维护期, 不会再引入任何新的功能. AWS 建议用户使用 Control Tower 方案来管理企业多账户环境. 本文将示例如何从现有的 Landing Zone 方案迁移至 Control Tower 并列举迁移中的注意事项">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/alz-scp.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/alz-stacksets.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/alz-provisioned-products.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/org-disable-trusted-access.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/alz-delete-config-1.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/alz-delete-config-2.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/act-setup-lz-1.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/act-setup-lz-home-region.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/act-setup-lz-additional-regions.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/act-setup-lz-ou.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/act-setup-lz-shared-accounts.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/act-setup-lz-wait.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/act-register-ou.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/alz-cleanup-provisioned-product.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/alz-cleanup-avm.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/2508560204/alz-cleanup-baseline-portfolio.png">
+<meta property="article:published_time" content="2023-09-16T01:33:17.000Z">
+<meta property="article:modified_time" content="2023-09-16T01:33:17.000Z">
+<meta property="article:author" content="L. Yuan">
+<meta property="article:tag" content="AWS">
+<meta property="article:tag" content="Landing Zone">
+<meta property="article:tag" content="Control Tower">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://notes.yuanlinios.me/2508560204/alz-scp.png">
+
+
+<link rel="canonical" href="https://notes.yuanlinios.me/2508560204/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://notes.yuanlinios.me/2508560204/","path":"2508560204/","title":"从 AWS Landing Zone 迁移至 Control Tower 1: 规划和实施"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>从 AWS Landing Zone 迁移至 Control Tower 1: 规划和实施 | Lin's Notes</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?77c4a44880a67fc83e6b9db83fc1e8c8"></script>
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="Lin's Notes" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Lin's Notes</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">All About IT Infra and Cloud</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">21</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">11</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">22</span></a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80" placeholder="搜索..." spellcheck="false" type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%81%E7%A7%BB%E4%B9%8B%E5%89%8D%E7%9A%84%E7%8A%B6%E6%80%81"><span class="nav-number">1.</span> <span class="nav-text">迁移之前的状态</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%81%E7%A7%BB%E7%9A%84%E5%8E%9F%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">迁移的原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A3%80%E6%9F%A5-trusted-access"><span class="nav-number">3.</span> <span class="nav-text">检查 trusted access</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%A0%E9%99%A4-config-recorder"><span class="nav-number">4.</span> <span class="nav-text">删除 config recorder</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%83%A8%E7%BD%B2-control-tower-landing-zone"><span class="nav-number">5.</span> <span class="nav-text">部署 Control Tower Landing Zone</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B3%A8%E5%86%8C%E7%BB%84%E7%BB%87%E5%8D%95%E5%85%83%E5%92%8C%E8%B4%A6%E5%8F%B7"><span class="nav-number">6.</span> <span class="nav-text">注册组织单元和账号</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B8%85%E7%90%86-aws-landing-zone-%E8%B5%84%E6%BA%90"><span class="nav-number">7.</span> <span class="nav-text">清理 AWS Landing Zone 资源</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%88%E6%AD%A2-service-catalog-%E4%B8%AD-avm-%E7%9A%84-provisioned-products"><span class="nav-number">7.1.</span> <span class="nav-text">终止 Service Catalog 中 AVM 的 provisioned products</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B8%85%E7%90%86-aws-landing-zone-baseline-resource-stacksets"><span class="nav-number">7.2.</span> <span class="nav-text">清理 AWS Landing Zone Baseline resource stacksets</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%A0%E9%99%A4-service-catalog-%E4%B8%AD%E7%9A%84-baseline-portfolio-%E4%B8%8E-avm-product"><span class="nav-number">7.3.</span> <span class="nav-text">删除 Service Catalog 中的 Baseline portfolio 与 AVM product</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B8%85%E7%90%86-aws-landing-zone-core-resource-stacksets"><span class="nav-number">7.4.</span> <span class="nav-text">清理 AWS Landing Zone Core resource stacksets</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%A0%E9%99%A4-aws-landing-zone-initiation-stack"><span class="nav-number">7.5.</span> <span class="nav-text">删除 AWS Landing Zone initiation stack</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B8%85%E7%90%86%E5%85%B6%E4%BB%96%E5%89%A9%E4%BD%99%E7%9A%84%E8%B5%84%E6%BA%90"><span class="nav-number">7.6.</span> <span class="nav-text">清理其他剩余的资源</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%87%8D%E5%BB%BA%E5%AE%9A%E5%88%B6%E7%9A%84%E5%9F%BA%E7%BA%BF%E8%B5%84%E6%BA%90"><span class="nav-number">8.</span> <span class="nav-text">重建定制的基线资源</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">9.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="L. Yuan" src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">L. Yuan</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">22</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">21</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/yuanlinios" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;yuanlinios" rel="external nofollow noopener noreferrer" target="_blank"><i class="github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yuanlinios@gmail.com" title="E-Mail → mailto:yuanlinios@gmail.com" rel="external nofollow noopener noreferrer" target="_blank"><i class="envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.linkedin.com/in/yuanlinios" title="Linkedin → https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;yuanlinios" rel="external nofollow noopener noreferrer" target="_blank"><i class="linkedin fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="cc-opacity" rel="external nofollow noopener noreferrer" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/2508560204/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="L. Yuan">
+      <meta itemprop="description" content>
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Lin's Notes">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          从 AWS Landing Zone 迁移至 Control Tower 1: 规划和实施
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-09-16 09:33:17" itemprop="dateCreated datePublished" datetime="2023-09-16T09:33:17+08:00">2023-09-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/AWS/" itemprop="url" rel="index"><span itemprop="name">AWS</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/AWS/Landing-Zone/" itemprop="url" rel="index"><span itemprop="name">Landing Zone</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/AWS/Landing-Zone/Control-Tower/" itemprop="url" rel="index"><span itemprop="name">Control Tower</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/2508560204/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2508560204/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>AWS Landing Zone 方案已经进入长期维护期, 不会再引入任何新的功能. AWS 建议用户使用 Control Tower 方案来管理企业多账户环境. 本文将示例如何从现有的 Landing Zone 方案迁移至 Control Tower 并列举迁移中的注意事项</p>
+<span id="more"></span>
+<h2 id="迁移之前的状态">迁移之前的状态</h2>
+<p>现存的组织单元 OU 结构 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">Root</span><br><span class="line">└── vopsdev-landing-zone</span><br><span class="line">    ├── core</span><br><span class="line">    │   ├── yl-master</span><br><span class="line">    │   ├── yl-security</span><br><span class="line">    │   └── yl-log-archive</span><br><span class="line">    ├── production</span><br><span class="line">    ├── test  </span><br><span class="line">    └── department</span><br><span class="line">        ├── yl-itdev</span><br><span class="line">        └── yl-network</span><br></pre></td></tr></table></figure> 由于存在一些 OU 级别的资源共享设置 (Resource Access Manager), 在迁移过程中想尽量保证 OU 结构不变</p>
+<p>现存的 Service Control Policy/SCP: <img src="alz-scp.png"></p>
+<p>用于部署核心资源 + 基线资源的 AWS Landing Zone StackSets <img src="alz-stacksets.png"></p>
+<p>Service Catalog 下 Provisioned Product 对应每一个受控的账号 <img src="alz-provisioned-products.png"></p>
+<h2 id="迁移的原理">迁移的原理</h2>
+<p>虽然 Control Tower 是从 AWS Landing Zone 发展而来, 部分概念一脉相承, 但是经过多年的发展, 区别也越来越大, 很多资源命名也不一致. 因此这里所谓的 "迁移" 本质上就是删了重建.</p>
+<p>原则上先完全删除清理现有的 AWS Landing Zone, 然后创建 Control Tower 是可行的. 但是这样会存在一段时间, 组织既不受 AWS Landing Zone 的管控, 也不受 Control Tower 的管控. 理想的情况是在 AWS Landing Zone 存在的同时, 启用 Control Tower, 然后再清理掉 AWS Landing Zone. 但是由于有一些全局资源会导致冲突 (主要是 config recorder), 因此合理的迁移步骤是:</p>
+<ul>
+<li>检查 trusted access 设置</li>
+<li>删除会导致冲突的 AWS Landing Zone 资源</li>
+<li>启用 Control Tower Landing Zone</li>
+<li>注册组织单元 (OU) 和账号到 Control Tower Landing Zone</li>
+<li>清理 AWS Landing Zone 资源</li>
+<li>重建定制的基线资源</li>
+</ul>
+<h2 id="检查-trusted-access">检查 trusted access</h2>
+<p>到 AWS Organization, Services 下检查是否启用了 config 和 cloudtrail 的 trusted access. 如果启用了, 则禁用</p>
+<p><img src="org-disable-trusted-access.png"></p>
+<h2 id="删除-config-recorder">删除 config recorder</h2>
+<p>在 Cloudformation stackset 下找到 AWS-Landing-Zone-Baseline-EnableConfig, 删除其下的 stack instance,</p>
+<p><img src="alz-delete-config-1.png"></p>
+<p>然后删除这个 stackset:</p>
+<p><img src="alz-delete-config-2.png"></p>
+<h2 id="部署-control-tower-landing-zone">部署 Control Tower Landing Zone</h2>
+<p>在现存的组织单元结构中, AWS Landing Zone 核心账号位于 vopsdev-landing-zone:core 之下. 在 Control Tower 中核心账号改称为 shared accounts, 包含 audit account 和 log archive account, 其所在 OU 被称为 Fundational OU, 只能放在顶级. 可以重用现存的账号作为 shared accounts, 此处将重用 yl-security 作为 audit account, 重用 yl-log-archive 作为 log archive account. Control Tower Landing Zone 创建完成后, shared accounts 会被自动移动到 Fundational OU 下.</p>
+<p>通常情况 audit account 和 log archive account 为专用账号, 不建议其中跑其他的工作负载. 但是如果这些账号中跑了额外的工作负载, 又引用了基于 OU 共享的资源, 则应该确保这些资源要共享给新的 Foundational OU 以避免造成对工作负载的影响.</p>
+<p>部署 Control Tower Landing Zone 之前, 先从相关 OU 上 detach AWS Landing Zone 的 SCP 以避免干扰. 然后在 Control Tower 控制台下选择 Set up landing zone</p>
+<p><img src="act-setup-lz-1.png"></p>
+<p>选择 home region, 这里是 us-west-2</p>
+<p><img src="act-setup-lz-home-region.png"></p>
+<p>保持 region deny setting 默认, 不启用. 再添加额外的 workload region, 此处添加了 eu-west-1</p>
+<p><img src="act-setup-lz-additional-regions.png"></p>
+<p>下一步设置 OU. 首先是 Foundational OU, 这里使用了默认的名字 Security. 选择不创建其他 OU, 因为后面会将现存的 OU 注册进来</p>
+<p><img src="act-setup-lz-ou.png"></p>
+<p>下一步设置 shared accounts. 可以使用现存的账号, 选择 Use existing account 填写 account id 即可. 需要说明的是, 虽然账号可以重用, 资源都是新建的, 即新的 organization-level trail, 新的 logging S3 sbucket 等</p>
+<p><img src="act-setup-lz-shared-accounts.png"></p>
+<p>Additional configurations 中按需要设置 AWS IAM Identity Center (SSO), organization level trail, logging retention, KMS 加密. 由于此环境中的 SSO 为单独配置, 选择 self-managed 跳过 Control Tower 的配置即可, 其他保持默认.</p>
+<p>最后检查一遍配置, 没问题了勾选 I understand ... 后启动 Set up landing zone. 等待设置完成</p>
+<p><img src="act-setup-lz-wait.png"></p>
+<p>Control Tower Landing Zone 设置成功以后, 浏览一下 controls library 中提供的 controls (guardrails). 相比于 AWS Landing Zone, Control Tower 根据最佳实践和各种安全标准提供了大量预定义 SCP/Config Rules. 按照 Guidance 类型, controls 可以分为 Mandatory, Elective 和 Strongly recommended 三类. 默认只启用了 Mandatory 类型, 用来保护 Control Tower 本身资源的完整性. 可以按照需要从 Elective 和 Strongly recommended 中选择部分启用.</p>
+<h2 id="注册组织单元和账号">注册组织单元和账号</h2>
+<p>Control Tower Landing Zone 设置完成后, 可以将现有的 OU 注册进来. 现在 Control Tower Landing Zone 已经支持 nested OU 树形结构, 但是需要注意:</p>
+<ul>
+<li>注册 OU 并不是递归的, 先注册 parent OU 后才能注册 child OU</li>
+<li>注册 OU 会自动注册其下直属账号</li>
+</ul>
+<p>因此这里先注册 vopsdev-landing-zone OU, 到 Control Tower 的 Organization 下</p>
+<p><img src="act-register-ou.png"></p>
+<p>然后同样的方法注册其下的 department/test/production OUs.</p>
+<h2 id="清理-aws-landing-zone-资源">清理 AWS Landing Zone 资源</h2>
+<p>将现存的 OU 注册到 Control Tower Landing Zone 之后, 启用的 controls 就会应用到受管控的 OU 及其下属账户上. 接着就可以清理之前 AWS Landing Zone 的资源了. 如果之前使用 AWS Landing Zone 来设置各个账号的 primary VPC, 则需要先将这些 VPC 内的资源迁移掉, 其复杂程度完全取决于这些 VPC 所承载的工作负载. 这里的示例环境并没有这种情形, 因此直接可以清理其他资源</p>
+<p>为了避免在清理过程中有人误操作把 AWS Landing Zone 的资源重新部署出来, 可以到 Codepipeline 中禁用 AWS Landing Zone 流水线 source 阶段到 build 阶段的转换.</p>
+<h3 id="终止-service-catalog-中-avm-的-provisioned-products">终止 Service Catalog 中 AVM 的 provisioned products</h3>
+<p>到 Service Catalog, Provisioned products 下面, 找到 production name 为 AWS-Landing-Zone-Account-Vending-Machine 那些条目, 选择 action, terminate.</p>
+<p><img src="alz-cleanup-provisioned-product.png"></p>
+<p>Production name 为 AWS Control Tower Account Factory 的那些 provisioned product 条目来自 Control Tower 的 Account Factory. 每一个注册进来的非 shared service account 会对应一个. 不要误删了.</p>
+<h3 id="清理-aws-landing-zone-baseline-resource-stacksets">清理 AWS Landing Zone Baseline resource stacksets</h3>
+<p>到 Cloudformation stacksets 下逐个清理名为 AWS-Landing-Zone-Baseline-* 的 stackset. 先删除下面的 stack instances, 再删除 stackset. 如果之前终止 provisioned products 运行顺利, 所有的 stack instances 应该都已经被删除, 此时直接删除 stackset 即可.</p>
+<h3 id="删除-service-catalog-中的-baseline-portfolio-与-avm-product">删除 Service Catalog 中的 Baseline portfolio 与 AVM product</h3>
+<p>到 Service Catalog, Product list 下选中 AWS-Landing-Zone-Account-Vending-Machine, action 选择 delete product</p>
+<p><img src="alz-cleanup-avm.png"></p>
+<p>到 Portfolios 下面, 选择 AWS Landing Zone - Baseline, 先删除其下关联的 product/constraints/access, 然后删除该 portfolio.</p>
+<p><img src="alz-cleanup-baseline-portfolio.png"></p>
+<p>其他的 portfolio 会在后面通过删除 landing zone initiation stack 删除</p>
+<h3 id="清理-aws-landing-zone-core-resource-stacksets">清理 AWS Landing Zone Core resource stacksets</h3>
+<p>继续到 Cloudformation stacksets 下清理名为 AWS-Landing-Zone-* 的 stackset. 同样先删除下面的 stack instances, 再删除 stackset.</p>
+<p>清理 AWS-Landing-Zone-SharedBucket 这个 stackset 并不会自动删除 AWS Landing Zone 的 log archive bucket + access log bucket, 需要去 log archive account 下手工清理.</p>
+<h3 id="删除-aws-landing-zone-initiation-stack">删除 AWS Landing Zone initiation stack</h3>
+<p>在 Cloudformation stacks 下删除 AWS Landing Zone 的 initiation stack. 完成后 AWS Landing Zone 相关的 codebuild, codepipeline, step function, service catalog portfolio 等资源都会被删除.</p>
+<h3 id="清理其他剩余的资源">清理其他剩余的资源</h3>
+<p>到 Systems Manager 下的 Parameter Store 根据描述信息删除属于 AWS Landing Zone 的参数. 到 Cloudwatch Log groups 下删除 AWS Landing Zone 相关的日志组.</p>
+<h2 id="重建定制的基线资源">重建定制的基线资源</h2>
+<p>如果在 AWS Landing Zone 中添加了自定义的基线资源, 则需要通过 Control Tower Landing Zone 的定制化重建出来, 这部分将放到下一篇中.</p>
+<h2 id="参考">参考</h2>
+<ul>
+<li><a target="_blank" rel="external nofollow noopener noreferrer" href="https://docs.aws.amazon.com/prescriptive-guidance/latest/aws-control-tower/introduction.html" class="uri">https://docs.aws.amazon.com/prescriptive-guidance/latest/aws-control-tower/introduction.html</a></li>
+<li><a target="_blank" rel="external nofollow noopener noreferrer" href="https://docs.aws.amazon.com/controltower/latest/userguide/alz-to-control-tower.html" class="uri">https://docs.aws.amazon.com/controltower/latest/userguide/alz-to-control-tower.html</a></li>
+<li><a target="_blank" rel="external nofollow noopener noreferrer" href="https://aws.amazon.com/blogs/mt/migrate-aws-landing-zone-solution-to-aws-control-tower/" class="uri">https://aws.amazon.com/blogs/mt/migrate-aws-landing-zone-solution-to-aws-control-tower/</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>L. Yuan
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://notes.yuanlinios.me/2508560204/" title="从 AWS Landing Zone 迁移至 Control Tower 1: 规划和实施">https://notes.yuanlinios.me/2508560204/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="external nofollow noopener noreferrer" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/AWS/" rel="tag"># AWS</a>
+              <a href="/tags/Landing-Zone/" rel="tag"># Landing Zone</a>
+              <a href="/tags/Control-Tower/" rel="tag"># Control Tower</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2503623812/" rel="prev" title="单节点 OKD4(SNO) - 手工方式">
+                  <i class="fa fa-chevron-left"></i> 单节点 OKD4(SNO) - 手工方式
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/3318020405/" rel="next" title="从 AWS Landing Zone 迁移至 Control Tower 2: 重建定制资源">
+                  从 AWS Landing Zone 迁移至 Control Tower 2: 重建定制资源 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    
+  <div class="comments" id="disqus_thread">
+    <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+  </div>
+  
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="id-card-o"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">L. Yuan</span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="external nofollow noopener noreferrer" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" rel="external nofollow noopener noreferrer" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+<script class="next-config" data-name="disqus" type="application/json">{"enable":true,"shortname":"yuanlinios-notes","count":true,"i18n":{"disqus":"disqus"}}</script>
+<script src="/js/third-party/comments/disqus.js"></script>
+
+</body>
+</html>
