@@ -372,12 +372,12 @@
 <p><img src="act-setup-lz-home-region.png"></p>
 <p>保持 region deny setting 默认, 不启用. 再添加额外的 workload region, 此处添加了 eu-west-1</p>
 <p><img src="act-setup-lz-additional-regions.png"></p>
-<p>下一步设置 OU. 首先是 Foundational OU, 这里使用了默认的名字 Security. 选择不创建其他 OU, 因为后面会将现存的 OU 注册进来</p>
+<p>下一步设置 OU. 首先是 Foundational OU, 这里使用了默认的名字 Security. 选择不创建其他 OU, 因为后面会将现存的 OU 注册进来.</p>
 <p><img src="act-setup-lz-ou.png"></p>
-<p>下一步设置 shared accounts. 可以使用现存的账号, 选择 Use existing account 填写 account id 即可. 需要说明的是, 虽然账号可以重用, 资源都是新建的, 即新的 organization-level trail, 新的 logging S3 sbucket 等</p>
+<p>下一步设置 shared accounts. 可以使用现存的账号, 选择 Use existing account 填写 account id 即可. 需要说明的是, 虽然账号可以重用, 资源都是新建的, 即新的 organization-level trail, 新的 logging S3 bucket 等.</p>
 <p><img src="act-setup-lz-shared-accounts.png"></p>
 <p>Additional configurations 中按需要设置 AWS IAM Identity Center (SSO), organization level trail, logging retention, KMS 加密. 由于此环境中的 SSO 为单独配置, 选择 self-managed 跳过 Control Tower 的配置即可, 其他保持默认.</p>
-<p>最后检查一遍配置, 没问题了勾选 I understand ... 后启动 Set up landing zone. 等待设置完成</p>
+<p>最后检查一遍配置, 没问题了勾选 I understand ... 后启动 Set up landing zone. 等待设置完成:</p>
 <p><img src="act-setup-lz-wait.png"></p>
 <p>Control Tower Landing Zone 设置成功以后, 浏览一下 controls library 中提供的 controls (guardrails). 相比于 AWS Landing Zone, Control Tower 根据最佳实践和各种安全标准提供了大量预定义 SCP/Config Rules. 按照 Guidance 类型, controls 可以分为 Mandatory, Elective 和 Strongly recommended 三类. 默认只启用了 Mandatory 类型, 用来保护 Control Tower 本身资源的完整性. 可以按照需要从 Elective 和 Strongly recommended 中选择部分启用.</p>
 <h2 id="注册组织单元和账号">注册组织单元和账号</h2>
