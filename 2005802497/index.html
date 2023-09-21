@@ -346,7 +346,7 @@
 <li>第二个 tier-1 gateway (corp-t1-standalone) 连接到 Seg-B, one-arm 模式的七层负载均衡器关联到 corp-t1-standalone</li>
 <li>corp-t0-gw 使用 HA VIP 连接到物理世界, 其默认路由指向物理路由器. 基于路由的 ipsec VPN 服务将关联到 corp-t0-gw, 接入企业内网</li>
 </ul>
-<div class="note info"><p>注意: 在 NSX-T 4.1 中, 负载均衡器必须连接到 tier-1 gateway</p>
+<div class="note info"><p>注意: 在当前 NSX-T 版本 (4.1) 中, 负载均衡器必须连接到 tier-1 gateway</p>
 </div>
 <h2 id="可选的迁移方案">可选的迁移方案</h2>
 <p>整体来说有两类方案. 第一类是就地迁移 (in-place migration), 在原有的基础设施上直接将 NSX-V 替换为 NSX-T. VMware 提供了 Migration Coordinator 工具来协助用户完成这种迁移. 第二类是另外准备一套 NSX-T 环境, 然后使用 enhanced vMotion 将工作负载迁移过去 (lift and shift). 这两类方法都有一些技术细节需要考量.</p>
