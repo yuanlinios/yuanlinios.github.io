@@ -6,7 +6,7 @@
   <link href="https://notes.yuanlinios.me/atom.xml" rel="self"/>
   
   <link href="https://notes.yuanlinios.me/"/>
-  <updated>2023-09-16T01:33:30.000Z</updated>
+  <updated>2023-09-21T06:08:53.000Z</updated>
   <id>https://notes.yuanlinios.me/</id>
   
   <author>
@@ -15,6 +15,35 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>迁移 NSX-V 到 NSX-T: 方案设计</title>
+    <link href="https://notes.yuanlinios.me/2005802497/"/>
+    <id>https://notes.yuanlinios.me/2005802497/</id>
+    <published>2023-09-21T06:08:53.000Z</published>
+    <updated>2023-09-21T06:08:53.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>NSX-V 将在 2024 年 1 月停止支持, 在 NSX-V 上运行工作负载的企业会被建议尽快迁移到 NSX-T. 在一个长期稳定运行的企业环境中更换其网络底座通常是一个相当麻烦的过程. 如何尽量减少网络迁移对业务的影响, 将会是很多企业需要考量的问题. 这里将使用一个实际的例子给出不同的迁移方案, 并分析各个方案的复杂性和宕机时间.</p><span id="more"></span><h2 id="设计和现有-nsx-v-等价的-nsx-t-拓扑">设计和现有 NSX-V 等价的 NSX-T 拓扑</h2><p>下图左侧是一个现存的 NSX-V 环境</p><p><img src="V2T.png" /></p><p>简单介绍一下这个拓扑:</p><ul><li>有三个承载业务的逻辑网段 (Seg-A, Seg-B 和 Seg-C)</li><li>逻辑网段 Seg-C 直接连接到 Edge Service Gateway (nsx-esg)<ul><li>在 nsx-esg 上启用了 inline 模式的四层负载均衡器, 将流量负载到 Seg-C 上的服务器. 因为这些服务器上运行的应用需要能直接看到客户端 IP, 所以这个负载衡器使用了透明模式. 使用透明模式后, 后端服务器的网关得指向负载均衡器</li></ul></li><li>逻辑网段 Seg-A 和 Seg-B 连接到 Logical Distributed Router (nsx-ldr)</li><li>第二个 Edge Service Gateway (nsx-internal-lb) 上启用了 one-arm 模式的七层负载均衡器, 连接到 Seg-B, 将流量负载到 Seg-B 上的应用服务器</li><li>nsx-esg 的默认路由指向物理路由器, 并且 nsx-esg 上启用了基于路由的 ipsec VPN 和企业的 VPN hub 连接来接入企业内网</li><li>nsx-esg 和 nsx-ldr 连接到 Transit 逻辑网段, 通过 ospf 进行路由交换/重分布</li></ul><p>NSX-T 和 NSX-V 之间有很大区别, 其设计相当灵活. 如何将现有的 NSX-V 拓扑转化为功能上等价的 NSX-T 拓扑将会是迁移过程中一项最重要的工作, 相当考验架构师对这两个产品和业务环境的理解. 这里不再展开, 右侧就是等价的 NSX-T 拓扑</p><ul><li>Seg-C 连接到 tier-1 gateway (corp-t1-ext) 将其作为网关, inline 模式的四层透明负载均衡器将关联到 corp-t1-ext. corp-t1-ext 上联到 tier-0 gateway (corp-t0-gw)</li><li>Seg-A 和 Seg-B 连接到 corp-t0-gw 将其作为网关</li><li>第二个 tier-1 gateway (corp-t1-standalone) 连接到 Seg-B, one-arm 模式的七层负载均衡器关联到 corp-t1-standalone</li><li>corp-t0-gw 使用 HA VIP 连接到物理世界, 其默认路由指向物理路由器. 基于路由的 ipsec VPN 服务将关联到 corp-t0-gw, 接入企业内网</li></ul><div class="note info"><p>注意: 在 NSX-T 4.1 中, 负载均衡器必须连接到 tier-1 gateway</p></div><h2 id="可选的迁移方案">可选的迁移方案</h2><p>整体来说有两类方案. 第一类是就地迁移 (in-place migration), 在原有的基础设施上直接将 NSX-V 替换为 NSX-T. VMware 提供了 Migration Coordinator 工具来协助用户完成这种迁移. 第二类是另外准备一套 NSX-T 环境, 然后使用 enhanced vMotion 将工作负载迁移过去 (lift and shift). 这两类方法都有一些技术细节需要考量.</p><p>对于就地迁移, Migration Coordinator 的全自动迁移模式仅支持有限几个非常简单的拓扑结构, 基本上没法使用到实际的企业环境. 即使后来 Migration Coordinator 支持了用户自定义拓扑, 它需要用户指定 ESG 和 tier-X gateway 之间的映射关系. 然而从上面的例子可以看出 ESG 和 tier-X gateway 并不见得就能对应起来 (nsx-esg 的 LB 和 VPN 分别拆到了 tier-1 和 tier-0 上). 此时就需要用户在使用 Migration Coordinator 的同时, 自己也要完成一部分迁移工作. 另外在 Migration Coordinator 迁移 Edge 和 Host 阶段有流量中断. 取决于 Host 数量的多少和并行度设置, 这个停机时间可能会达到几十分钟.</p><p>对于 lift and shift 方式, NSX-T 和 NSX-V 的逻辑网段互相独立, 因此为了保证业务的持续性, 需要将 NSX-V 逻辑网段桥接到 NSX-T, 并保证初始时网关只存在于 NSX-V. 在最终迁移完成后, 切换网关到 NSX-T. 这种方法需要准备额外的基础设施, 但是停机时间仅存在于最后切换网关阶段, 这个时间可以很短.</p><p>后面将针对 Migration Coordinator 和 lift and shift 迁移方式分别展开</p>]]></content>
+    
+    
+    <summary type="html">&lt;p&gt;NSX-V 将在 2024 年 1 月停止支持, 在 NSX-V 上运行工作负载的企业会被建议尽快迁移到 NSX-T. 在一个长期稳定运行的企业环境中更换其网络底座通常是一个相当麻烦的过程. 如何尽量减少网络迁移对业务的影响, 将会是很多企业需要考量的问题. 这里将使用一个实际的例子给出不同的迁移方案, 并分析各个方案的复杂性和宕机时间.&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="VMware" scheme="https://notes.yuanlinios.me/categories/VMware/"/>
+    
+    <category term="NSX-T" scheme="https://notes.yuanlinios.me/categories/VMware/NSX-T/"/>
+    
+    <category term="NSX-V" scheme="https://notes.yuanlinios.me/categories/VMware/NSX-T/NSX-V/"/>
+    
+    
+    <category term="VMware" scheme="https://notes.yuanlinios.me/tags/VMware/"/>
+    
+    <category term="NSX-T" scheme="https://notes.yuanlinios.me/tags/NSX-T/"/>
+    
+    <category term="NSX-V" scheme="https://notes.yuanlinios.me/tags/NSX-V/"/>
+    
+  </entry>
   
   <entry>
     <title>从 AWS Landing Zone 迁移至 Control Tower 2: 重建定制资源</title>
@@ -517,31 +546,6 @@
     <category term="Openshift" scheme="https://notes.yuanlinios.me/tags/Openshift/"/>
     
     <category term="RedHat" scheme="https://notes.yuanlinios.me/tags/RedHat/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>实施 AWS Landing Zone 3: 部署 Initiation Stack</title>
-    <link href="https://notes.yuanlinios.me/2267786039/"/>
-    <id>https://notes.yuanlinios.me/2267786039/</id>
-    <published>2020-03-12T16:42:14.000Z</published>
-    <updated>2020-03-12T16:42:14.000Z</updated>
-    
-    <content type="html"><![CDATA[<p>本文将介绍 Landing Zone Initiation Stack 的部署, 参数解析以及一些容易出错的地方</p><span id="more"></span><h2 id="创建-initiation-stack">创建 Initiation Stack</h2><p>登入组织账号 (即这里的 yl-master), 进入 Cloudformation 服务. 创建一个新的 stack: <img src="create-initiation-stack.png" /></p><p>template s3 url 使用 https://s3.amazonaws.com/solutions-reference/aws-landing-zone/v2.3.1/aws-landing-zone-initiation.template</p><p>Landing Zone Initiation stack 是一个比较庞大的 cloudformation template, 大约近 6000 行配置, 其核心部分是 5 个 Lambda 和 7 个 Step Functions. 但这还不是 Landing Zone 的全貌, 因为它引用了很多外部资源, 例如保存在 S3 里的 Lambda 函数实现. 在 Initiation stack template 中大部分内容 (约 2/3) 是 7 个 StateMachines (Step Functions) 的定义.</p><div class="note info"><p>AWS 会对 Landing Zone 进行更新升级, 最新版本的信息可以从 https://aws.amazon.com/solutions/aws-landing-zone/ 获取</p></div><h3 id="参数详解">参数详解</h3><h4 id="landing-zone-core-account-configuration">Landing Zone Core Account Configuration</h4><p>核心账号配置部分</p><ul><li>Shared Service Account Email Address: 填写现存共享服务账号的邮件地址. 如果你的现存环境中还没有共享服务账号也没关系, 如果有需要, Landing Zone 可以帮你创建</li><li>Log Archive Account Email Address: 填写现存的日志账号邮件地址. 同上</li><li>Security Account Email Address: 填写现存的安全审计账号的邮件地址. 同上</li><li>Nest OU Name Delimiter: Colon (:) 使用冒号作为 OU 路径的界定符. 保持默认即可</li><li>Core OU Name: vopsdev-landing-zone:core 根据上一篇文章中的 OU 规划来填写, 这里是核心账号所在的 OU</li><li>Non Core OU Names: vopsdev-landing-zone:production,vopsdev-landing-zone:department,vopsdev-landing-zone:staging,vopsdev-landing-zone:sandbox 根据上一篇文章中的 OU 规划来写, 这里是非核心账号所在的 OU. 使用逗号作为分隔符</li><li>Security Alert Email Address: 接受安全告警邮件的地址. 具体是来自 GuardDuty Finding, Cloudwatch Alarm, Config Rules Compliance Status Change 的消息</li><li>Lock StackSetsExecution Role: Yes. 是否锁定角色 AWSCloudFormationStackSetExecutionRole. Landing Zone 通过 Stackset 来部署资源基线到各个受控账号, 因此会在各个账号下创建角色 AWSCloudFormationStackSetExecutionRole 来执行 stack instance. 该角色具有账户的管理员权限. 锁定该角色的含义是只允许特定的实体 (principal) 来承担 (assume role).</li><li>Subscribe All Change Events Email To Topic: No. 是否订阅所有的配置变更事件. 按需设置</li><li>All Change Events Email: 接受配置变更事件通知的邮件地址</li></ul><h4 id="landing-zone-pipeline-configuration">Landing Zone Pipeline Configuration</h4><p>流水线配置部分</p><ul><li>Pipeline Approval Stage: Yes. 给 Landing Zone 配置流水线添加手动批准的步骤</li><li>Pipeline Approval Email Address: 批准 Landing Zone 配置流水线的邮件地址</li><li>Auto Build Landing Zone: No. 是否在 initiation stack 创建完成后立刻启动配置流水线. 我们需要对配置进行定制, 因此这里一定需要设置为 No</li></ul><h4 id="shared-services-vpc-configuration">Shared Services VPC Configuration</h4><p>共享服务的 VPC 配置部分</p><ul><li>Shared Services VPC Options: Shared-Services-Network-3-AZs. 选择共享服务账号的 VPC 类型. 仅仅用来生成初始配置. 并不会在 Initiation 阶段创建实际的资源. 后面可以按自己的需要修改初始配置</li><li>Shared Services VPC CIDR: 100.65.0.0/16 共享服务 VPC 的网段. 同上</li></ul><h4 id="vpc-flow-logs-retention-policy">VPC Flow Logs Retention Policy</h4><p>VPC Flow Logs 的留存策略</p><ul><li>VPC Flow Logs Retention In Days: 90</li></ul><h4 id="aws-security-and-configuration-services">AWS Security and Configuration Services</h4><p>安全和配置管理部分</p><ul><li>Enable AWS Security and Configuraiton Monitoring in: All regions 在哪些区域启用安全和配置管理服务 (GuardDuty, Config 之类). 同样也仅仅用于生成初始化配置. 后期可以按需要修改</li></ul><h4 id="aws-config-rules">AWS Config Rules</h4><p>启用哪些 AWS Config Rules. 按默认都启用即可</p><h4 id="add-on-publisher-configuraiton">Add-On Publisher Configuraiton</h4><p>Add-On 产品更新配置部分</p><ul><li>AWS Manages Service Catalog Add-On Portfolio? Manual Updates 手动管理 Add-On Portfolio 的版本更新</li><li>Add-On Update Notification Email: Add-On 更新通知的邮件地址. 按需设置</li></ul><h2 id="关于通知邮件地址">关于通知邮件地址</h2><h3 id="结论">结论</h3><p>不同的 AWS 账号需要不同的邮件地址, 这基本不会出错. 但是在部署 Landing Zone Initiation stack 时需要注意 Security Account Email Address 的邮件地址不能用来接收 Security Alert. 即 Security Alert Email Address 和 Security Account Email Address 不能是同一个.</p><h3 id="原因">原因</h3><p>Initiaton stack 中有这样的资源定义</p><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">LandingZoneConfigDeployer:</span></span><br><span class="line">  <span class="attr">Type:</span> <span class="string">Custom::ConfigDeployer</span></span><br><span class="line">  <span class="attr">Properties:</span></span><br><span class="line">    <span class="attr">metrics_flag:</span> <span class="type">!FindInMap</span> [<span class="string">Solution</span>, <span class="string">Metrics</span>, <span class="string">SendAnonymousData</span>]</span><br><span class="line">    <span class="attr">email_list:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="type">!Ref</span> <span class="string">SharedServicesAccountEmail</span></span><br><span class="line">      <span class="bullet">-</span> <span class="type">!Ref</span> <span class="string">LoggingAccountEmail</span></span><br><span class="line">      <span class="bullet">-</span> <span class="type">!Ref</span> <span class="string">SecurityAccountEmail</span></span><br><span class="line">      <span class="bullet">-</span> <span class="type">!Ref</span> <span class="string">SecurityAlertEmail</span></span><br></pre></td></tr></table></figure><p>而 Lambda 函数 LandingZoneDeploymentLambda 的 config_deployer.py 中会检查 email_list 中是否有重复地址 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">unique_email_validator</span>(<span class="params">email_list</span>):</span></span><br><span class="line">    result = <span class="built_in">set</span>([x <span class="keyword">for</span> x <span class="keyword">in</span> email_list <span class="keyword">if</span> email_list.count(x) &gt; <span class="number">1</span>])</span><br><span class="line">    duplicate_list = <span class="built_in">list</span>(result)</span><br><span class="line">    logger.info(<span class="string">&quot;Duplicate Emails: &#123;&#125;&quot;</span>.<span class="built_in">format</span>(duplicate_list))</span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">not</span> duplicate_list:</span><br><span class="line">        logger.info(<span class="string">&quot;Duplicate emails not found&quot;</span>)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="keyword">raise</span> Exception(<span class="string">&quot;Found duplicate email(s) &#123;&#125; in the parameters.&quot;</span>.<span class="built_in">format</span>(duplicate_list))</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">config_deployer</span>(<span class="params">event</span>):</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        s3 = S3(logger)</span><br><span class="line">    ...</span><br><span class="line">    <span class="comment"># Check if the emails are Unique</span></span><br><span class="line">    unique_email_validator(event.get(<span class="string">&#x27;email_list&#x27;</span>))</span><br><span class="line">        </span><br></pre></td></tr></table></figure></p>]]></content>
-    
-    
-    <summary type="html">&lt;p&gt;本文将介绍 Landing Zone Initiation Stack 的部署, 参数解析以及一些容易出错的地方&lt;/p&gt;</summary>
-    
-    
-    
-    <category term="AWS" scheme="https://notes.yuanlinios.me/categories/AWS/"/>
-    
-    <category term="Landing Zone" scheme="https://notes.yuanlinios.me/categories/AWS/Landing-Zone/"/>
-    
-    
-    <category term="AWS" scheme="https://notes.yuanlinios.me/tags/AWS/"/>
-    
-    <category term="Landing Zone" scheme="https://notes.yuanlinios.me/tags/Landing-Zone/"/>
     
   </entry>
   
