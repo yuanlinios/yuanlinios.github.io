@@ -1348,4 +1348,187 @@
         <tag>NSX-V</tag>
       </tags>
   </entry>
+  <entry>
+    <title>迁移 NSX-V 到 NSX-T: Migration Coordinator 方案 - 1 准备</title>
+    <url>/3271280561/</url>
+    <content><![CDATA[<p>本文将介绍如何使用 Migration Coordinator 的用户自定义拓扑模式来迁移现有的 NSX-V 到 NSX-T 环境的第一部分, 迁移前的准备工作.</p>
+<span id="more"></span>
+<h2 id="迁移中需要考虑的要点">迁移中需要考虑的要点</h2>
+<p>迁移前后的拓扑</p>
+<p><img src="V2T.png" /></p>
+<p>关于物理网络的一些额外的配置信息</p>
+<ul>
+<li>overlay transport vlan: 12</li>
+<li>NSX-V ESG 通过 vlan 11 连接到外部物理世界</li>
+</ul>
+<p>这里将进行完全的"就地迁移", 保持外部 ip 地址/dns条目/vpn peering 地址不变. 即使使用用户自定义拓扑, 仅依靠 Migration Coordinator 本身依旧无法完成 NSX-V 到 NSX-T 的转化:</p>
+<ul>
+<li>有部分 NSX-V 特性不支持通过 MC 进行迁移, 具体可以查看 NSX Migration Guide</li>
+<li>MC 要求用户指定 ESG 到 Tier-X gateway 的映射, 而这样的映射关系并不一定存在</li>
+</ul>
+<p>因此对于 MC 无法完成的部分, 或者不想让 MC 自动完成的部分, 用户都可以自行配置:</p>
+<ul>
+<li>创建 transport zones</li>
+<li>创建/配置 edge cluster</li>
+<li>创建连接到外部物理 vlan 的逻辑网段</li>
+<li>创建/配置 tier-X gateways</li>
+<li>创建/配置负载均衡器</li>
+</ul>
+<p>MC 本身可以自动创建 edge cluster, 这里选择自行部署仅仅是为了获得更大的灵活性 (使用专用的 host 来承载 edge cluster). 根据需要可以在启动 MC 流程之前就配置一部分, 然后在 MC 执行过程中可以暂停流程, 进行额外手工配置后继续 MC 流程.</p>
+<h2 id="提前准备-nsx-t-的部分配置">提前准备 NSX-T 的部分配置</h2>
+<p>本环境将使用专门的主机来部署 edge cluster, 即承载 edge node 的 ESXi 主机本身不作为传输节点, 因此 edge node TEP 和传输节点可以使用相同 vlan (12) 的地址池.</p>
+<h3 id="准备-edge-cluser">准备 Edge Cluser</h3>
+<p>先创建 Edge TEP 地址池</p>
+<p><img src="01-edge-pool.png" /></p>
+<p>创建 Edge Uplink Profile</p>
+<p><img src="02-edge-uplink.png" /></p>
+<p>创建 VLAN 传输区域和 Overlay 传输区域</p>
+<p><img src="03-transport-zone.png" /></p>
+<p>单独部署 Edge 节点</p>
+<p><img src="04-deploy-edge-nodes.png" /></p>
+<p>配置 Edge 节点</p>
+<p><img src="05-configure-edge-node.png" /></p>
+<p>创建 Edge Cluster</p>
+<p><img src="07-edge-cluster.png" /></p>
+<h3 id="创建连接到物理世界的逻辑网段">创建连接到物理世界的逻辑网段</h3>
+<p>正常情况下虚拟环境使用 vlan 11 连接到物理世界, 需要创建一个对应的 vlan-backed segment. 由于这里想实现完全的就地迁移, 保留所有的外部地址, 为了防止迁移过程对外部环境的影响 (地址冲突), 初始故意设置了错误的 vlan id (0) 将 NSX-T 环境和物理环境隔离开, 迁移完成后再改回来</p>
+<p><img src="08-svc-vlan-segment.png" /></p>
+<h3 id="创建-tier-0tier-1-gateways">创建 Tier-0/Tier-1 Gateways</h3>
+<p>创建 tier-0 gateway: corp-t0-gw, A/S 模式</p>
+<p><img src="09-create-corp-t0-gw.png" /></p>
+<p>创建 tier-1 gateway: corp-t1-ext, A/S 模式, 连接到 corp-t0-gw</p>
+<p><img src="10-create-corp-t1-ext.png" /></p>
+<p>创建 tier-1 gateway: corp-t1-standalone, A/S 模式, 不连接到任何 tier-0</p>
+<p><img src="11-create-corp-t1-standalone.png" /></p>
+<h3 id="配置-tier-0-gateway">配置 Tier-0 Gateway</h3>
+<p>能提前配置的部分可以尽量先提前配置出来.</p>
+<p>配置 corp-t0-gw 外部接口</p>
+<p><img src="12-1-config-corp-t0-gw-external-interfaces.png" /></p>
+<p>配置 HA-VIP</p>
+<p><img src="12-2-config-corp-t0-gw-havip.png" /></p>
+<p>配置默认路由</p>
+<p><img src="12-3-config-corp-t0-gw-default-route.png" /></p>
+<p>Tier-0 上的 NAT 规则</p>
+<p><img src="19-1-nat-corp-t0-gw.png" /></p>
+<p>Tier-0 上的防火墙规则</p>
+<p><img src="19-2-corp-t0-gw-firewall.png" /></p>
+<p>还可以提前配置之后 route-based ipsec VPN 需要的 bgp 部分. 例如, 本地 AS:</p>
+<p><img src="16-config-corp-t0-gw-bgp.png" /></p>
+<p>bgp 邻居:</p>
+<p><img src="15-config-corp-t0-gw-bgp-neighbor.png" /></p>
+<p>正常更新源地址应该是 VPN tunnel interface 地址, 由于 VPN 配置还没迁移过来, 这个地址还不可用, 因此这里先空着.</p>
+<p>bgp 重分布:</p>
+<p><img src="17-config-corp-t0-gw-bgp-redistribute.png" /></p>
+<p>下一篇将开始使用 MC 进行正式迁移.</p>
+]]></content>
+      <categories>
+        <category>VMware</category>
+        <category>NSX-T</category>
+        <category>NSX-V</category>
+      </categories>
+      <tags>
+        <tag>VMware</tag>
+        <tag>NSX-T</tag>
+        <tag>NSX-V</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>迁移 NSX-V 到 NSX-T: Migration Coordinator 方案 - 2 迁移</title>
+    <url>/1379010243/</url>
+    <content><![CDATA[<p>本文将完成使用 Migration Coordinator 基于用户自定义拓扑迁移现有的 NSX-V 到 NSX-T 环境的剩余部分</p>
+<span id="more"></span>
+<h2 id="启动-migration-coordinator-服务">启动 Migration Coordinator 服务</h2>
+<p>默认 MC 服务并没有启动, 使用 ssh 登入 NSX-T Manager, 执行命令 <code>start service migration-coordinator</code> 将其启动起来. 然后就可以在 NSX-T Manager 的 Web UI 上访问了.</p>
+<p>选择 "User Defined Topology"</p>
+<p><img src="20-start-user-defined-topology-migration.png" /></p>
+<p>选择迁移模式 "Complete Migration"</p>
+<p><img src="21-complete-migration.png" /></p>
+<h2 id="将-nsx-v-环境注册到-nsx-t">将 NSX-V 环境注册到 NSX-T</h2>
+<p>添加 vCenter 和 NSX-V 的认证信息, 添加到 NSX-T 环境中</p>
+<p><img src="22-add-vcenter-and-nsxv.png" /></p>
+<h2 id="migration-coordinator-流程---导入拓扑">Migration Coordinator 流程 - 导入拓扑</h2>
+<p>导入 NSX-V 拓扑</p>
+<p><img src="23-import-configuration.png" /></p>
+<p>然后可以查看导入的拓扑, 确认没有问题</p>
+<p><img src="24-view-nsxv-topology.png" /></p>
+<h2 id="migration-coordinator-流程---转化二层">Migration Coordinator 流程 - 转化二层</h2>
+<p>然后转化二层:</p>
+<p><img src="25-translate-layer-2-configuration.png" /></p>
+<p>转化完会检测配置冲突, 有冲突需要用户手工消解的部分会提示:</p>
+<p><img src="26-resolve-layer-2-issues.png" /></p>
+<p>大部分情况下使用默认的冲突消解建议即可, 这里 Migrate or skip VLAN DVPGs missing segments 部分选择了 skip. 因为连接到物理世界的 segment 已经提前创建出来, 并且这个环境里其他的 DVPG 并不需要在 NSX-T 中使用</p>
+<p><img src="27-skip-missed-vlan-segments.png" /></p>
+<p>完成所有的冲突消解:</p>
+<p><img src="28-resolve-layer-2-issues-done.png" /></p>
+<p>然后就可以进行二层迁移:</p>
+<p><img src="29-migration-layer-2-configuration.png" /></p>
+<p>检查二层迁移结果:</p>
+<p><img src="30-check-layer-2.png" /></p>
+<p>二层迁移完成之后, transport node uplink profile, segment 之类都会自动创建出来.</p>
+<h2 id="手工迁移负载均衡器配置">手工迁移负载均衡器配置</h2>
+<p>接着我们可以从 migration coordinator 中退出来, 手工迁移负载均衡器相关的配置.</p>
+<p>首先在 corp-t1-standalone 添加 service port 连接到 segment B:</p>
+<p><img src="31-config-corp-t1-standalone-csp.png" /></p>
+<p>为 corp-t1-standalone 添加默认路由:</p>
+<p><img src="32-config-corp-t1-standalone-default-route.png" /></p>
+<p>将 segment C 连接到 Tier-1 gateway (corp-t1-ext) 并设置网关</p>
+<p><img src="33-attach-seg-c-to-corp-t1-ext.png" /></p>
+<p>创建外部负载均衡器, 连接到 Tier-1 gateway (corp-t1-ext)</p>
+<p><img src="34-create-ext-inline-lb.png" /></p>
+<p>创建内部负载均衡器, 连接到 Tier-1 gateway (corp-t1-standalone)</p>
+<p><img src="35-create-internal-lb.png" /></p>
+<p>按照原有环境的配置, 创建 server pools, monitors, application profiles, application rules 和 virtual servers. 这里不再一一详细列出</p>
+<p><img src="45-lb-all-virtualservers.png" /></p>
+<h2 id="migration-coordinator-流程---转化三到七层">Migration Coordinator 流程 - 转化三到七层</h2>
+<p>接着回到 migration coordinator 界面, 继续三到七层的配置. 首先是定义拓扑, 选择 "Select a Tier-0/Tier-1 Gateway for each entity that needs to be migrated":</p>
+<p><img src="46-topology-mapping.png" /></p>
+<p>将 nsx-ldr 对应到 corp-t0-gw, 这是因为我们需要将 segment A 和 segment B 连接到 Tier-0 上. 将 nsx-esg 对应到 corp-t0-gw, 这是因为我们需要将 IPSec VPN 的配置迁移过去. nsx-internal-lb 不设置映射, 因为我们已经手动配置好了负载均衡器.</p>
+<p>确认不迁移未设置映射的 ESG</p>
+<p><img src="47-skip-unmapped.png" /></p>
+<p>然后转化三到七层配置:</p>
+<p><img src="48-translate-L3-L4-L7.png" /></p>
+<p>和二层类似, 用户也需要手工消解三到七层配置转化中发现的冲突:</p>
+<p><img src="53-resolve-l3-l4-l7-issues.png" /></p>
+<p>非建议选项: 跳过 vIDM, 这个环境里面不需要</p>
+<p><img src="54-skip-vIDM.png" /></p>
+<p>其他基本上都可以选择建议的配置, 完成所有冲突消解:</p>
+<p><img src="56-resolve-l3-l4-l7-done.png" /></p>
+<p>开始迁移三到七层配置:</p>
+<p><img src="57-migrate-l3-l4-l7-configuration.png" /></p>
+<p>完成后检查三到七层配置:</p>
+<p><img src="58-check-l3-l4-l7-realization.png" /></p>
+<p>此时 segment A 和 B 会连接到 Tier-0 gateway, IPSec VPN 的配置也会产生. 到此为止, 现存 NSX-V 环境的流量还不会受到影响</p>
+<h2 id="migration-coordinator-流程---迁移-edge">Migration Coordinator 流程 - 迁移 Edge</h2>
+<p>接着开始迁移 Edge. 从这个阶段开始, 现存环境的流量将开始中断.</p>
+<p><img src="59-migrate-edge.png" /></p>
+<p>迁移完 Edge 后, 就可以断开 NSX-V 环境 nsx-esg 的网络连接, 并修正 NSX-T VLAN segment 的 VLAN ID 了.</p>
+<h2 id="migration-coordinator-流程---迁移-host">Migration Coordinator 流程 - 迁移 Host</h2>
+<p>根据需要选择主机迁移的并行度</p>
+<p><img src="59-migrate-host-plan.png" /></p>
+<p>开始迁移主机, 并等待迁移结束</p>
+<p><img src="62-migrate-host-done.png" /></p>
+<p>迁移时会先卸载主机上的 NSX-V 模块, 然后再安装 NSX-T 模块, 进行主机准备. 而且只有在迁移主机时, 才会将其上运行的虚拟机的 vNIC 重新连接到 NSX-T 的 segment, 因此虚拟机东西向流量完全恢复要等到所有主机迁移完成. 根据主机数量的多少和并行度的设置, 这个过程可能会长达几十分钟甚至数小时.</p>
+<h2 id="手工修复环境">手工修复环境</h2>
+<p>最后手工修复剩下的部分</p>
+<ul>
+<li>刷新物理路由器上 NSX-T 外部地址的 ARP 缓存条目. 因为我们保留了相同的外部地址, 物理路由器上可能还留着 NSX-V 对应的条目. 可以触发 NSX-T Tier-0 gateway 的 failover 来发送 GARP 刷新缓存或者直接在物理路由器上清除 ARP 缓存</li>
+<li>修复 corp-t0-gw 上 bgp 邻居配置中的更新源地址, 此时 VPN tunnel 正常应该已经起来了, 使用 VPN tunnel 地址作为更新源</li>
+<li>检查 MC 自动产生的迁移对象, 如果不需要的可以删除</li>
+</ul>
+<p>最后检查迁移完成后的环境, 确保路由/负载均衡器/VPN等基本功能都没有问题:</p>
+<p><img src="63-post-check-vpn-ok.png" /></p>
+<p><img src="64-post-check-vs-ok.png" /></p>
+<p>最后清除剩下的 NSX-V 环境.</p>
+]]></content>
+      <categories>
+        <category>VMware</category>
+        <category>NSX-T</category>
+        <category>NSX-V</category>
+      </categories>
+      <tags>
+        <tag>VMware</tag>
+        <tag>NSX-T</tag>
+        <tag>NSX-V</tag>
+      </tags>
+  </entry>
 </search>
