@@ -167,7 +167,7 @@
       </tags>
   </entry>
   <entry>
-    <title>单节点 OKD4(SNO) - Assisted Installer</title>
+    <title>单节点 OKD4 SNO - Assisted Installer</title>
     <url>/3946862006/</url>
     <content><![CDATA[<p>Single Node Openshift (SNO), 顾名思义就是只有一个节点的 Openshift. 让用户可以在资源紧缺的边缘设备上运行 Openshift 工作负载. 对于动辄需要几十上百G内存的普通集群, SNO 也非常适合本地开发/测试环境. 这里将记录如何使用 Assisted Installer 方式来部署单节点 OKD (SNO) 4.12 <span id="more"></span></p>
 <h2 id="一些基本信息">一些基本信息</h2>
@@ -210,9 +210,9 @@
       </tags>
   </entry>
   <entry>
-    <title>单节点 OKD4(SNO) - 手工方式</title>
+    <title>单节点 OKD4 SNO - 手工方式</title>
     <url>/2503623812/</url>
-    <content><![CDATA[<p>使用手工方式部署单节点 OKD (SNO) 4.12, 记录其中的坑和解决方法. 前文介绍的 assisted installer 方式比较简单, 但是需要用户的交互. 这里虽然是手工方式, 但是很容易转化为自动化流水线. 使用的 OKD 版本依然是 4.12.0-0.okd-2023-04-01-051724 <span id="more"></span></p>
+    <content><![CDATA[<p>使用手工方式部署单节点 OKD SNO 4.12, 记录其中的坑和解决方法. 前文介绍的 assisted installer 方式比较简单, 但是需要用户的交互. 这里虽然是手工方式, 但是很容易转化为自动化流水线. 使用的 OKD 版本依然是 4.12.0-0.okd-2023-04-01-051724 <span id="more"></span></p>
 <h2 id="直接使用-ocp-文档会遇到的问题">直接使用 OCP 文档会遇到的问题</h2>
 <p>由于 rhcos 和 fedora coreos 的差异, 直接照搬 OCP 文档上创建内嵌 ignotion 文件的 ISO 来进行安装的方法会遇到各种各样的问题.</p>
 <h3 id="var-空间不足">/var 空间不足</h3>
