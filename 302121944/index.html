@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"notes.yuanlinios.me","root":"/","images":"/images","scheme":"Mist","darkmode":false,"version":"8.8.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"disqus","storage":true,"lazyload":false,"nav":{"disqus":{"text":"Load Disqus","order":-1}},"activeClass":"disqus"},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="本系列将介绍如何使用 Lift &amp; Shift + Edge 桥接的方式来迁移现存的 NSX-V 环境到 NSX-T. 第一部分将先创建新的 NSX-T 环境. 和前面类似, 此迁移将保证所有的外部地址&#x2F;DNS条目&#x2F;VPN peer 配置保持不变.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="迁移 NSX-V 到 NSX-T: Lift &amp; Shift - 1 部署目标环境">
+<meta property="og:url" content="https://notes.yuanlinios.me/302121944/index.html">
+<meta property="og:site_name" content="Lin&#39;s Notes">
+<meta property="og:description" content="本系列将介绍如何使用 Lift &amp; Shift + Edge 桥接的方式来迁移现存的 NSX-V 环境到 NSX-T. 第一部分将先创建新的 NSX-T 环境. 和前面类似, 此迁移将保证所有的外部地址&#x2F;DNS条目&#x2F;VPN peer 配置保持不变.">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/V2T-bridge.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/11-prepare-transport-node.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/12-physical-segment.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/14-create-corp-t0-gw.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/15-corp-t0-gw-external-interfaces.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/16-corp-t0-gw-ha-vip.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/18-corp-t0-gw-default-route.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/21-corp-t0-gw-bgp.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/22-corp-t0-gw-bgp-neighbor.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/24-gateway-firewall.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/25-corp-t0-gw-nat-rule.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/26-all-segments.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/23-create-corp-t1-ext.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/27-create-corp-t1-standalone.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/28-corp-t1-standalone-csp.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/29-corp-t1-standalone-default-route.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/30-create-external-lb.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/32-create-internal-lb-detached.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/42-lb-virtual-servers.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/43-create-ipsec-vpn-service.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/44-create-ipsec-vpn-endpoint.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/45-create-ike-profile.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/46-create-ipsec-profile.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/302121944/47-create-ipsec-session.png">
+<meta property="article:published_time" content="2023-10-07T01:40:36.000Z">
+<meta property="article:modified_time" content="2023-10-07T01:40:36.000Z">
+<meta property="article:author" content="L. Yuan">
+<meta property="article:tag" content="VMware">
+<meta property="article:tag" content="NSX-T">
+<meta property="article:tag" content="NSX-V">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://notes.yuanlinios.me/302121944/V2T-bridge.png">
+
+
+<link rel="canonical" href="https://notes.yuanlinios.me/302121944/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://notes.yuanlinios.me/302121944/","path":"302121944/","title":"迁移 NSX-V 到 NSX-T: Lift & Shift - 1 部署目标环境"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>迁移 NSX-V 到 NSX-T: Lift & Shift - 1 部署目标环境 | Lin's Notes</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?77c4a44880a67fc83e6b9db83fc1e8c8"></script>
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="Lin's Notes" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Lin's Notes</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">All About IT Infra and Cloud</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">22</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">12</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">27</span></a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80" placeholder="搜索..." spellcheck="false" type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%81%E7%A7%BB%E6%AD%A5%E9%AA%A4%E6%A6%82%E8%A6%81"><span class="nav-number">1.</span> <span class="nav-text">迁移步骤概要</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA-nsx-t-%E6%8B%93%E6%89%91"><span class="nav-number">2.</span> <span class="nav-text">创建 NSX-T 拓扑</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%87%86%E5%A4%87%E4%BC%A0%E8%BE%93%E8%8A%82%E7%82%B9%E5%92%8C%E6%89%BF%E8%BD%BD%E4%B8%9C%E8%A5%BF%E5%90%91%E6%B5%81%E9%87%8F%E7%9A%84-edge-%E9%9B%86%E7%BE%A4"><span class="nav-number">2.1.</span> <span class="nav-text">准备传输节点和承载东西向流量的 Edge 集群</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E5%B9%B6%E9%85%8D%E7%BD%AE-tier-0tier-1"><span class="nav-number">2.2.</span> <span class="nav-text">创建并配置 Tier-0&#x2F;Tier-1</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E5%B9%B6%E9%85%8D%E7%BD%AE%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1%E5%99%A8"><span class="nav-number">2.3.</span> <span class="nav-text">创建并配置负载均衡器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E5%B9%B6%E9%85%8D%E7%BD%AE-ipsec-vpn"><span class="nav-number">2.4.</span> <span class="nav-text">创建并配置 IPSec VPN</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="L. Yuan" src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">L. Yuan</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">27</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">22</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/yuanlinios" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;yuanlinios" rel="external nofollow noopener noreferrer" target="_blank"><i class="github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yuanlinios@gmail.com" title="E-Mail → mailto:yuanlinios@gmail.com" rel="external nofollow noopener noreferrer" target="_blank"><i class="envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.linkedin.com/in/yuanlinios" title="Linkedin → https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;yuanlinios" rel="external nofollow noopener noreferrer" target="_blank"><i class="linkedin fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="cc-opacity" rel="external nofollow noopener noreferrer" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/302121944/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="L. Yuan">
+      <meta itemprop="description" content>
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Lin's Notes">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          迁移 NSX-V 到 NSX-T: Lift & Shift - 1 部署目标环境
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-10-07 09:40:36" itemprop="dateCreated datePublished" datetime="2023-10-07T09:40:36+08:00">2023-10-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/VMware/" itemprop="url" rel="index"><span itemprop="name">VMware</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/VMware/NSX-T/" itemprop="url" rel="index"><span itemprop="name">NSX-T</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/VMware/NSX-T/NSX-V/" itemprop="url" rel="index"><span itemprop="name">NSX-V</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/302121944/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="302121944/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>2k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>2 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>本系列将介绍如何使用 Lift &amp; Shift + Edge 桥接的方式来迁移现存的 NSX-V 环境到 NSX-T. 第一部分将先创建新的 NSX-T 环境. 和前面类似, 此迁移将保证所有的外部地址/DNS条目/VPN peer 配置保持不变. <span id="more"></span></p>
+<h2 id="迁移步骤概要">迁移步骤概要</h2>
+<p>在同一个 vCenter 下创建一个新的 vDC, 配置好基础的主机/存储/网络. 然后在这个新的 vDC 下创建和 NSX-V 功能等价的 NSX-T 拓扑. 为了避免对外部环境和现有环境的影响, 部分配置需要细微调整:</p>
+<ul>
+<li>连接到物理环境的 VLAN backed segment 可暂时使用错误的 VLAN id (0) 来实现和物理环境的隔离</li>
+<li>所有 NSX-T overlay segment 配置网关, 但是不连接到任何 gateway. 因为桥接之后网关在 NSX-V 那端</li>
+<li>内部负载均衡器暂时不连接到 gateway</li>
+</ul>
+<p><img src="V2T-bridge.png"></p>
+<p>这里有些做法和 NSX migration guide 并不完全一致. 实际上现实环境各种各样, 文档无法面面俱到. 理解自己的环境, 选择最合适的方案.</p>
+<p>对于桥接, 需要在 NSX-V 所在主机上单独部署 NSX-T Edge. 此时该主机将进行 vxlan 封装/解封装, 其上运行的 Edge 能再进行 geneve 封装/解封装, 以完成两个环境的对接. 每一个逻辑网段的桥接需要一个单独的 NSX-T Edge 集群.</p>
+<p>配置完桥接以后就可以使用 enhanced vMotion 将工作负载从原先的 vDC 迁移到新的 vDC 并使用 NSX-T 的逻辑网段. 这个过程网络流量不会受到影响. 迁移完后将前面临时调整的部分进行修正:</p>
+<ul>
+<li>修正 NSX-T 连接到物理世界 VLAN segment 的 VLAN id</li>
+<li>将 NSX-T overlay segment 连接到 gateway</li>
+<li>将内部负载均衡器连接到 gateway</li>
+</ul>
+<h2 id="创建-nsx-t-拓扑">创建 NSX-T 拓扑</h2>
+<h3 id="准备传输节点和承载东西向流量的-edge-集群">准备传输节点和承载东西向流量的 Edge 集群</h3>
+<p>常规步骤添加 compute manager, 创建 transport node TEP pool, edge node TEP pool, transport node uplink profile, edge node uplink profile, overlay transport zone, vlan transport zone. 然后部署并配置用于东西向流量的 Edge 集群, 创建 transport node profile 完成主机准备. 不再赘述.</p>
+<p><img src="11-prepare-transport-node.png"></p>
+<h3 id="创建并配置-tier-0tier-1">创建并配置 Tier-0/Tier-1</h3>
+<p>先创建连接到物理环境的 VLAN-backed segment, 暂时使用 VLAN id 0 来隔离 NSX-T 和外部物理环境</p>
+<p><img src="12-physical-segment.png"></p>
+<p>创建 Tier-0: corp-t0-gw</p>
+<p><img src="14-create-corp-t0-gw.png"></p>
+<p>配置 Tier-0 的外部接口</p>
+<p><img src="15-corp-t0-gw-external-interfaces.png"></p>
+<p>配置 Tier-0 的 HA VIP</p>
+<p><img src="16-corp-t0-gw-ha-vip.png"></p>
+<p>配置 Tier-0 的默认路由</p>
+<p><img src="18-corp-t0-gw-default-route.png"></p>
+<p>之后 route-based IPSec VPN 所使用的 bgp 配置也可以提前做出来:</p>
+<p><img src="21-corp-t0-gw-bgp.png"></p>
+<p><img src="22-corp-t0-gw-bgp-neighbor.png"></p>
+<p>更新源地址暂时不可用, 可以先空着. Tier-0 上的 gateway 防火墙和 NAT 规则也可以先创建出来:</p>
+<p><img src="24-gateway-firewall.png"></p>
+<p><img src="25-corp-t0-gw-nat-rule.png"></p>
+<p>然后创建 overlay segments, 设置网关地址, 但是不连接到任何 Tier-0/Tier-1 gateway:</p>
+<p><img src="26-all-segments.png"></p>
+<p>创建 Tier-1: corp-t1-ext 连接到 corp-t0-gw, 路由发布 connected subnets + LB VIP:</p>
+<p><img src="23-create-corp-t1-ext.png"></p>
+<p>创建 Tier-1: corp-t1-standalone 不连接到任何 Tier-0:</p>
+<p><img src="27-create-corp-t1-standalone.png"></p>
+<p>在 corp-t1-standalone 上创建 service interface 连接到 Seg-B, 并设置默认路由:</p>
+<p><img src="28-corp-t1-standalone-csp.png"></p>
+<p><img src="29-corp-t1-standalone-default-route.png"></p>
+<p>这里注意一下, 因为 NSX-V 的 Seg-B 和 NSX-T 的 Seg-B 后面会桥接起来, 这个 service interface 地址不要和现有环境中的地址冲突了. 后面切换完成后, 如果想改成之前使用的地址也是可以的.</p>
+<h3 id="创建并配置负载均衡器">创建并配置负载均衡器</h3>
+<p>创建外部负载均衡器, 连接到 corp-t1-ext:</p>
+<p><img src="30-create-external-lb.png"></p>
+<p>创建内部负载均衡器, 不连接到任何 Tier-1:</p>
+<p><img src="32-create-internal-lb-detached.png"></p>
+<p>然后参照现有的环境创建 virtual servers, monitors, server pools, application profiles, application rules 等, 不再赘述</p>
+<p><img src="42-lb-virtual-servers.png"></p>
+<p>这里内部负载均衡器上的 virtual servers 可以直接使用原始地址. 因为内部负载均衡器没有附加到 corp-t1-standalone, 后面即使做了桥接也不会有地址冲突的问题. 外部负载均衡器上的 virtual servers 也可以直接使用原始地址, 这是因为 Seg-C 还没有连接到 corp-t1-ext, 因此即使 Seg-C 做了桥接也不会有地址冲突.</p>
+<h3 id="创建并配置-ipsec-vpn">创建并配置 IPSec VPN</h3>
+<p>参照现有的 VPN 配置, 对应地在 Tier-0 上创建 IPSec VPN service:</p>
+<p><img src="43-create-ipsec-vpn-service.png"></p>
+<p>创建 VPN endpoint, 使用和 NSX-V 一致的地址来保证 VPN peer 配置不变:</p>
+<p><img src="44-create-ipsec-vpn-endpoint.png"></p>
+<p>创建和 NSX-V 环境一致的 IKE profile + IPSec profile</p>
+<p><img src="45-create-ike-profile.png"></p>
+<p><img src="46-create-ipsec-profile.png"></p>
+<p>最后创建 VPN 会话, 选择前面自定义的 IKE profile + IPSec profile. 由于目前是隔离状态, VPN 会话是 down 的状态</p>
+<p><img src="47-create-ipsec-session.png"></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>L. Yuan
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://notes.yuanlinios.me/302121944/" title="迁移 NSX-V 到 NSX-T: Lift &amp; Shift - 1 部署目标环境">https://notes.yuanlinios.me/302121944/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="external nofollow noopener noreferrer" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/VMware/" rel="tag"># VMware</a>
+              <a href="/tags/NSX-T/" rel="tag"># NSX-T</a>
+              <a href="/tags/NSX-V/" rel="tag"># NSX-V</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/1379010243/" rel="prev" title="迁移 NSX-V 到 NSX-T: Migration Coordinator 方案 - 2 迁移">
+                  <i class="fa fa-chevron-left"></i> 迁移 NSX-V 到 NSX-T: Migration Coordinator 方案 - 2 迁移
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/3148157594/" rel="next" title="迁移 NSX-V 到 NSX-T: Lift & Shift - 2 部署 Edge Bridge 并迁移">
+                  迁移 NSX-V 到 NSX-T: Lift & Shift - 2 部署 Edge Bridge 并迁移 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    
+  <div class="comments" id="disqus_thread">
+    <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+  </div>
+  
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="id-card-o"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">L. Yuan</span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="external nofollow noopener noreferrer" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" rel="external nofollow noopener noreferrer" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+<script class="next-config" data-name="disqus" type="application/json">{"enable":true,"shortname":"yuanlinios-notes","count":true,"i18n":{"disqus":"disqus"}}</script>
+<script src="/js/third-party/comments/disqus.js"></script>
+
+</body>
+</html>

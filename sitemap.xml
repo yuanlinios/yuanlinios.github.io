@@ -2,6 +2,20 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://notes.yuanlinios.me/3148157594/</loc>
+    
+    <lastmod>2023-10-07</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://notes.yuanlinios.me/302121944/</loc>
+    
+    <lastmod>2023-10-07</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://notes.yuanlinios.me/1379010243/</loc>
     
     <lastmod>2023-09-22</lastmod>
@@ -200,7 +214,7 @@
 
   <url>
     <loc>https://notes.yuanlinios.me/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
@@ -208,154 +222,154 @@
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/VMware/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/NSX-T/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/govc/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/TLS/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/PKI/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/ansible/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/vault/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/Hashicorp/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/Linux/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/CentOS/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/Openshift/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/OKD4/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/SNO/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/StackRox/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/Red-Hat-Advanced-Cluster-Security-for-Kubernetes/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/RedHat/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/Falco/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/AWS/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/Landing-Zone/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/Control-Tower/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/CfCT/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/tags/NSX-V/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
@@ -364,84 +378,84 @@
   
   <url>
     <loc>https://notes.yuanlinios.me/categories/VMware/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/categories/Automation/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/categories/CentOS/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/categories/VMware/NSX-T/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/categories/RedHat/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/categories/Automation/Ansible/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/categories/AWS/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/categories/CentOS/Administration/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/categories/RedHat/Openshift/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/categories/AWS/Landing-Zone/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/categories/AWS/Landing-Zone/Control-Tower/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
     <loc>https://notes.yuanlinios.me/categories/VMware/NSX-T/NSX-V/</loc>
-    <lastmod>2023-10-03</lastmod>
+    <lastmod>2023-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>

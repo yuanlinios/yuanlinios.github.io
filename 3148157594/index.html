@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"notes.yuanlinios.me","root":"/","images":"/images","scheme":"Mist","darkmode":false,"version":"8.8.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":"disqus","storage":true,"lazyload":false,"nav":{"disqus":{"text":"Load Disqus","order":-1}},"activeClass":"disqus"},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+<meta name="description" content="继续介绍如何使用 Lift &amp; Shift + Edge 桥接的方式来迁移现存的 NSX-V 环境到 NSX-T. 这部分将准备新的 NSX-T Edge 集群将 NSX-V 和 NSX-T 的逻辑网段进行桥接, 然后迁移工作负载.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="迁移 NSX-V 到 NSX-T: Lift &amp; Shift - 2 部署 Edge Bridge 并迁移">
+<meta property="og:url" content="https://notes.yuanlinios.me/3148157594/index.html">
+<meta property="og:site_name" content="Lin&#39;s Notes">
+<meta property="og:description" content="继续介绍如何使用 Lift &amp; Shift + Edge 桥接的方式来迁移现存的 NSX-V 环境到 NSX-T. 这部分将准备新的 NSX-T Edge 集群将 NSX-V 和 NSX-T 的逻辑网段进行桥接, 然后迁移工作负载.">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://notes.yuanlinios.me/3148157594/48-prepare-trunking-port-group.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3148157594/49-prepare-segment-security.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3148157594/50-bridge-edge-networking-seg-a.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3148157594/53-bridge-overlay-uplink.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3148157594/54-bridge-uplink.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3148157594/55-edge-overlay-nvds.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3148157594/56-edge-bridge-nvds.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3148157594/59-bridge-profile.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3148157594/60-all-bridge-profiles.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3148157594/61-bridge-to-segment.png">
+<meta property="og:image" content="https://notes.yuanlinios.me/3148157594/63-get-bridge.png">
+<meta property="article:published_time" content="2023-10-07T01:41:12.000Z">
+<meta property="article:modified_time" content="2023-10-07T01:41:12.000Z">
+<meta property="article:author" content="L. Yuan">
+<meta property="article:tag" content="VMware">
+<meta property="article:tag" content="NSX-T">
+<meta property="article:tag" content="NSX-V">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://notes.yuanlinios.me/3148157594/48-prepare-trunking-port-group.png">
+
+
+<link rel="canonical" href="https://notes.yuanlinios.me/3148157594/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://notes.yuanlinios.me/3148157594/","path":"3148157594/","title":"迁移 NSX-V 到 NSX-T: Lift & Shift - 2 部署 Edge Bridge 并迁移"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>迁移 NSX-V 到 NSX-T: Lift & Shift - 2 部署 Edge Bridge 并迁移 | Lin's Notes</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?77c4a44880a67fc83e6b9db83fc1e8c8"></script>
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="Lin's Notes" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <h1 class="site-title">Lin's Notes</h1>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">All About IT Infra and Cloud</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu">
+        <li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>首页</a></li>
+        <li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="user fa-fw"></i>关于</a></li>
+        <li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="tags fa-fw"></i>标签<span class="badge">22</span></a></li>
+        <li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="th fa-fw"></i>分类<span class="badge">12</span></a></li>
+        <li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>归档<span class="badge">27</span></a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80" placeholder="搜索..." spellcheck="false" type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E5%B9%B6%E9%85%8D%E7%BD%AE%E6%A1%A5%E6%8E%A5%E6%89%80%E7%94%A8%E7%9A%84-nsx-t-edge-%E9%9B%86%E7%BE%A4"><span class="nav-number">1.</span> <span class="nav-text">创建并配置桥接所用的 NSX-T Edge 集群</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%87%86%E5%A4%87%E4%B8%BB%E6%9C%BA%E7%AB%AF%E5%8F%A3%E7%BB%84"><span class="nav-number">1.1.</span> <span class="nav-text">准备主机端口组</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%83%A8%E7%BD%B2%E5%B9%B6%E9%85%8D%E7%BD%AE-bridge-edge-%E9%9B%86%E7%BE%A4"><span class="nav-number">1.2.</span> <span class="nav-text">部署并配置 Bridge Edge 集群</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E6%A1%A5%E6%8E%A5%E8%BF%9E%E6%8E%A5-nsx-v-%E5%92%8C-nsx-t-%E9%80%BB%E8%BE%91%E7%BD%91%E6%AE%B5"><span class="nav-number">1.3.</span> <span class="nav-text">创建桥接连接 NSX-V 和 NSX-T 逻辑网段</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%81%E7%A7%BB%E5%B7%A5%E4%BD%9C%E8%B4%9F%E8%BD%BD%E5%B9%B6%E5%88%87%E6%8D%A2%E7%BD%91%E7%BB%9C"><span class="nav-number">2.</span> <span class="nav-text">迁移工作负载并切换网络</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B3%E4%BA%8E%E7%89%B9%E5%AE%9A%E5%B7%A5%E4%BD%9C%E8%B4%9F%E8%BD%BD%E7%9A%84%E8%80%83%E9%87%8F"><span class="nav-number">3.</span> <span class="nav-text">关于特定工作负载的考量</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="L. Yuan" src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">L. Yuan</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">27</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">22</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/yuanlinios" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;yuanlinios" rel="external nofollow noopener noreferrer" target="_blank"><i class="github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:yuanlinios@gmail.com" title="E-Mail → mailto:yuanlinios@gmail.com" rel="external nofollow noopener noreferrer" target="_blank"><i class="envelope fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://www.linkedin.com/in/yuanlinios" title="Linkedin → https:&#x2F;&#x2F;www.linkedin.com&#x2F;in&#x2F;yuanlinios" rel="external nofollow noopener noreferrer" target="_blank"><i class="linkedin fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license site-overview-item animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="cc-opacity" rel="external nofollow noopener noreferrer" target="_blank"><img src="https://cdn.jsdelivr.net/npm/@creativecommons/vocabulary@2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://notes.yuanlinios.me/3148157594/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="L. Yuan">
+      <meta itemprop="description" content>
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Lin's Notes">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          迁移 NSX-V 到 NSX-T: Lift & Shift - 2 部署 Edge Bridge 并迁移
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2023-10-07 09:41:12" itemprop="dateCreated datePublished" datetime="2023-10-07T09:41:12+08:00">2023-10-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/VMware/" itemprop="url" rel="index"><span itemprop="name">VMware</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/VMware/NSX-T/" itemprop="url" rel="index"><span itemprop="name">NSX-T</span></a>
+        </span>
+          ，
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/VMware/NSX-T/NSX-V/" itemprop="url" rel="index"><span itemprop="name">NSX-V</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv">
+      <span class="post-meta-item-icon">
+        <i class="eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span id="busuanzi_value_page_pv"></span>
+    </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Disqus：</span>
+    
+    <a title="disqus" href="/3148157594/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="3148157594/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>2k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>2 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>继续介绍如何使用 Lift &amp; Shift + Edge 桥接的方式来迁移现存的 NSX-V 环境到 NSX-T. 这部分将准备新的 NSX-T Edge 集群将 NSX-V 和 NSX-T 的逻辑网段进行桥接, 然后迁移工作负载. <span id="more"></span></p>
+<h2 id="创建并配置桥接所用的-nsx-t-edge-集群">创建并配置桥接所用的 NSX-T Edge 集群</h2>
+<h3 id="准备主机端口组">准备主机端口组</h3>
+<p>在原始 NSX-V 环境创建 VDS Trunk 端口组:</p>
+<p><img src="48-prepare-trunking-port-group.png"></p>
+<p>并且在需要桥接的 NSX-V virtualwire 端口组安全设置打开 Promiscuous mode + Forged transmit:</p>
+<p><img src="49-prepare-segment-security.png"></p>
+<p>实际上也可以开启 MAC learning 而不使用 Promiscuous. 只是在 vSphere 7 环境下开启 MAC learning 只能通过 API 完成, 而 vSphere 8 则提供了图形界面的方式来启用 MAC learning.</p>
+<div class="note info"><p>开启 Promiscuous 会对网络性能产生一定影响, 如果无法接受则需使用 MAC learning</p>
+</div>
+<h3 id="部署并配置-bridge-edge-集群">部署并配置 Bridge Edge 集群</h3>
+<p>在原始启用了 NSX-V 的主机集群上部署 NSX-T Edge 节点, 第一个 vNIC 连接管理网络, 第二个 vNIC 连接 Trunk VDS 端口组, 第三个 vNIC 连接目标 NSX-V 逻辑网段:</p>
+<p><img src="50-bridge-edge-networking-seg-a.png"></p>
+<p>每一个需要桥接的逻辑网段需要一个 Bridge Edge Cluster. 这里总共有三个逻辑网段, 因此需要三个 Bridge Edge Cluster. 每个 Cluster 里至少有一个 Edge Node (如果做高可用则需要两个)</p>
+<p>然后配置 Bridge Edge 节点. 每个 Bridge Edge 里将运行两个 NVDS, 一个用于 NSX-T 的 overlay 一个用于桥接, 因此对应的需要两种不同的上行链路配置.</p>
+<p>首先是 overlay 的上行链路配置:</p>
+<p><img src="53-bridge-overlay-uplink.png"></p>
+<p>然后是桥接的上行链路配置, transport vlan id 设置为 0:</p>
+<p><img src="54-bridge-uplink.png"></p>
+<p>配置 Bridge Edge 节点, 每个 Edge 节点内创建两个 NVDS: 一个用于 NSX-T 的 overlay 流量, 对应使用的是 overlay 的上行配置</p>
+<p><img src="55-edge-overlay-nvds.png"></p>
+<p>另一个用于桥接流量, 对应使用桥接的上行</p>
+<p><img src="56-edge-bridge-nvds.png"></p>
+<p>然后为每个需要桥接的逻辑网段创建 Bridge Edge Cluster. 这里创建了三个单节点集群.</p>
+<h3 id="创建桥接连接-nsx-v-和-nsx-t-逻辑网段">创建桥接连接 NSX-V 和 NSX-T 逻辑网段</h3>
+<p>创建 bridge profile, 关联对应的 Edge cluster, 并选择 primary node</p>
+<p><img src="59-bridge-profile.png"></p>
+<p>每个需要桥接的逻辑网段都需要一个 bridge profile 关联到对应的 Edge cluster. 最后一共是三个配置:</p>
+<p><img src="60-all-bridge-profiles.png"></p>
+<p>然后到 NSX-T 的各个 segment 下配置桥接: Additional Settings -&gt; Edge Bridges, ADD EDGE BRIDGE</p>
+<p><img src="61-bridge-to-segment.png"></p>
+<p>选择对应的 bridge profile, 选择 vlan transport zone, vlan id 使用 0.</p>
+<p>桥接配置到此就完成了, 可以用 ssh 登入到各个 Bridge Edge 节点检查服务是否正常:</p>
+<p><img src="63-get-bridge.png"></p>
+<p>然后可以迁移几个测试虚拟机来验证桥接的连通性. 到此为止, 所有的准备和验证工作都可以在迁移之前完成, 而不会影响到现有的工作负载.</p>
+<h2 id="迁移工作负载并切换网络">迁移工作负载并切换网络</h2>
+<p>到了真正迁移的时间, 使用 enhanced vMotion 将所有工作负载迁移到新的 vDC 下, 迁移时目的地选择 NSX-T 的逻辑网段. 取决于工作负载的规模, 这个过程可能会很长. 但是如果前面桥接配置正确, 则这段时间内业务流量不会受到影响.</p>
+<p>然后就需要做网关的切换和最后的调整, 这部分配置修改会导致流量短暂中断</p>
+<ul>
+<li>断开 NSX-V 侧所有 ESG/LDR 的连接</li>
+<li>将 NSX-T 所有 overlay segment 连接到网关: Seg-A/B 连接到 corp-t0-gw, Seg-C 连接到 corp-t1-ext. 将 internal-lb 连接到 corp-t1-standalone</li>
+<li>修正 NSX-T VLAN segment 的 vlan id: 0 -&gt; 11</li>
+<li>刷新物理路由器上 Tier-0 的 ARP 缓存</li>
+<li>修改 Tier-0 上 bgp 邻居更新源, 使用 VPN tunnel 地址</li>
+</ul>
+<p>这些步骤即使手工操作也可以在五分钟内完成. 如果提前准备了 API 调用脚本则可以进一步缩短流量中断时间. 迁移完成并验证后就可以清理 NSX-V 环境了.</p>
+<h2 id="关于特定工作负载的考量">关于特定工作负载的考量</h2>
+<p>相对于就地迁移方案, Lift &amp; Shift + 桥接的方案虽然更加复杂, 但是需要的停机时间会显著缩短. 对维护停机时间有高度要求的企业可能会更倾向于这种方案. 然而企业在选择迁移方案时还需要考虑迁移方案对上层工作负载带来的影响.</p>
+<p>Lift &amp; Shift + 桥接的方法会将工作负载迁移到一个新的 vDC 上, 对应的就是一套新的主机/存储/网络环境. 大部分情况下这种变化对上层工作负载是透明的, 然而有时候却并不总是这样. 现在很多容器平台和底层云/虚拟化平台有深度的整合. 如果在容器平台之外修改了底层云/虚拟化环境, 那么容器平台的 cloud provider 配置可能会处于不一致/不可用的状态. 此外对于容器平台某些类型的持久卷, 直接迁移其底层的存储也可能会引起持久卷的丢失. 凡此种种都是迁移规划和方案选择时需要考虑的问题.</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>L. Yuan
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://notes.yuanlinios.me/3148157594/" title="迁移 NSX-V 到 NSX-T: Lift &amp; Shift - 2 部署 Edge Bridge 并迁移">https://notes.yuanlinios.me/3148157594/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="external nofollow noopener noreferrer" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/VMware/" rel="tag"># VMware</a>
+              <a href="/tags/NSX-T/" rel="tag"># NSX-T</a>
+              <a href="/tags/NSX-V/" rel="tag"># NSX-V</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/302121944/" rel="prev" title="迁移 NSX-V 到 NSX-T: Lift & Shift - 1 部署目标环境">
+                  <i class="fa fa-chevron-left"></i> 迁移 NSX-V 到 NSX-T: Lift & Shift - 1 部署目标环境
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    
+  <div class="comments" id="disqus_thread">
+    <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+  </div>
+  
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="id-card-o"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">L. Yuan</span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="external nofollow noopener noreferrer" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/mist/" rel="external nofollow noopener noreferrer" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+
+
+<script class="next-config" data-name="disqus" type="application/json">{"enable":true,"shortname":"yuanlinios-notes","count":true,"i18n":{"disqus":"disqus"}}</script>
+<script src="/js/third-party/comments/disqus.js"></script>
+
+</body>
+</html>

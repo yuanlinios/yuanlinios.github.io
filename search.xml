@@ -1531,4 +1531,149 @@
         <tag>NSX-V</tag>
       </tags>
   </entry>
+  <entry>
+    <title>迁移 NSX-V 到 NSX-T: Lift &amp; Shift - 1 部署目标环境</title>
+    <url>/302121944/</url>
+    <content><![CDATA[<p>本系列将介绍如何使用 Lift &amp; Shift + Edge 桥接的方式来迁移现存的 NSX-V 环境到 NSX-T. 第一部分将先创建新的 NSX-T 环境. 和前面类似, 此迁移将保证所有的外部地址/DNS条目/VPN peer 配置保持不变. <span id="more"></span></p>
+<h2 id="迁移步骤概要">迁移步骤概要</h2>
+<p>在同一个 vCenter 下创建一个新的 vDC, 配置好基础的主机/存储/网络. 然后在这个新的 vDC 下创建和 NSX-V 功能等价的 NSX-T 拓扑. 为了避免对外部环境和现有环境的影响, 部分配置需要细微调整:</p>
+<ul>
+<li>连接到物理环境的 VLAN backed segment 可暂时使用错误的 VLAN id (0) 来实现和物理环境的隔离</li>
+<li>所有 NSX-T overlay segment 配置网关, 但是不连接到任何 gateway. 因为桥接之后网关在 NSX-V 那端</li>
+<li>内部负载均衡器暂时不连接到 gateway</li>
+</ul>
+<p><img src="V2T-bridge.png" /></p>
+<p>这里有些做法和 NSX migration guide 并不完全一致. 实际上现实环境各种各样, 文档无法面面俱到. 理解自己的环境, 选择最合适的方案.</p>
+<p>对于桥接, 需要在 NSX-V 所在主机上单独部署 NSX-T Edge. 此时该主机将进行 vxlan 封装/解封装, 其上运行的 Edge 能再进行 geneve 封装/解封装, 以完成两个环境的对接. 每一个逻辑网段的桥接需要一个单独的 NSX-T Edge 集群.</p>
+<p>配置完桥接以后就可以使用 enhanced vMotion 将工作负载从原先的 vDC 迁移到新的 vDC 并使用 NSX-T 的逻辑网段. 这个过程网络流量不会受到影响. 迁移完后将前面临时调整的部分进行修正:</p>
+<ul>
+<li>修正 NSX-T 连接到物理世界 VLAN segment 的 VLAN id</li>
+<li>将 NSX-T overlay segment 连接到 gateway</li>
+<li>将内部负载均衡器连接到 gateway</li>
+</ul>
+<h2 id="创建-nsx-t-拓扑">创建 NSX-T 拓扑</h2>
+<h3 id="准备传输节点和承载东西向流量的-edge-集群">准备传输节点和承载东西向流量的 Edge 集群</h3>
+<p>常规步骤添加 compute manager, 创建 transport node TEP pool, edge node TEP pool, transport node uplink profile, edge node uplink profile, overlay transport zone, vlan transport zone. 然后部署并配置用于东西向流量的 Edge 集群, 创建 transport node profile 完成主机准备. 不再赘述.</p>
+<p><img src="11-prepare-transport-node.png" /></p>
+<h3 id="创建并配置-tier-0tier-1">创建并配置 Tier-0/Tier-1</h3>
+<p>先创建连接到物理环境的 VLAN-backed segment, 暂时使用 VLAN id 0 来隔离 NSX-T 和外部物理环境</p>
+<p><img src="12-physical-segment.png" /></p>
+<p>创建 Tier-0: corp-t0-gw</p>
+<p><img src="14-create-corp-t0-gw.png" /></p>
+<p>配置 Tier-0 的外部接口</p>
+<p><img src="15-corp-t0-gw-external-interfaces.png" /></p>
+<p>配置 Tier-0 的 HA VIP</p>
+<p><img src="16-corp-t0-gw-ha-vip.png" /></p>
+<p>配置 Tier-0 的默认路由</p>
+<p><img src="18-corp-t0-gw-default-route.png" /></p>
+<p>之后 route-based IPSec VPN 所使用的 bgp 配置也可以提前做出来:</p>
+<p><img src="21-corp-t0-gw-bgp.png" /></p>
+<p><img src="22-corp-t0-gw-bgp-neighbor.png" /></p>
+<p>更新源地址暂时不可用, 可以先空着. Tier-0 上的 gateway 防火墙和 NAT 规则也可以先创建出来:</p>
+<p><img src="24-gateway-firewall.png" /></p>
+<p><img src="25-corp-t0-gw-nat-rule.png" /></p>
+<p>然后创建 overlay segments, 设置网关地址, 但是不连接到任何 Tier-0/Tier-1 gateway:</p>
+<p><img src="26-all-segments.png" /></p>
+<p>创建 Tier-1: corp-t1-ext 连接到 corp-t0-gw, 路由发布 connected subnets + LB VIP:</p>
+<p><img src="23-create-corp-t1-ext.png" /></p>
+<p>创建 Tier-1: corp-t1-standalone 不连接到任何 Tier-0:</p>
+<p><img src="27-create-corp-t1-standalone.png" /></p>
+<p>在 corp-t1-standalone 上创建 service interface 连接到 Seg-B, 并设置默认路由:</p>
+<p><img src="28-corp-t1-standalone-csp.png" /></p>
+<p><img src="29-corp-t1-standalone-default-route.png" /></p>
+<p>这里注意一下, 因为 NSX-V 的 Seg-B 和 NSX-T 的 Seg-B 后面会桥接起来, 这个 service interface 地址不要和现有环境中的地址冲突了. 后面切换完成后, 如果想改成之前使用的地址也是可以的.</p>
+<h3 id="创建并配置负载均衡器">创建并配置负载均衡器</h3>
+<p>创建外部负载均衡器, 连接到 corp-t1-ext:</p>
+<p><img src="30-create-external-lb.png" /></p>
+<p>创建内部负载均衡器, 不连接到任何 Tier-1:</p>
+<p><img src="32-create-internal-lb-detached.png" /></p>
+<p>然后参照现有的环境创建 virtual servers, monitors, server pools, application profiles, application rules 等, 不再赘述</p>
+<p><img src="42-lb-virtual-servers.png" /></p>
+<p>这里内部负载均衡器上的 virtual servers 可以直接使用原始地址. 因为内部负载均衡器没有附加到 corp-t1-standalone, 后面即使做了桥接也不会有地址冲突的问题. 外部负载均衡器上的 virtual servers 也可以直接使用原始地址, 这是因为 Seg-C 还没有连接到 corp-t1-ext, 因此即使 Seg-C 做了桥接也不会有地址冲突.</p>
+<h3 id="创建并配置-ipsec-vpn">创建并配置 IPSec VPN</h3>
+<p>参照现有的 VPN 配置, 对应地在 Tier-0 上创建 IPSec VPN service:</p>
+<p><img src="43-create-ipsec-vpn-service.png" /></p>
+<p>创建 VPN endpoint, 使用和 NSX-V 一致的地址来保证 VPN peer 配置不变:</p>
+<p><img src="44-create-ipsec-vpn-endpoint.png" /></p>
+<p>创建和 NSX-V 环境一致的 IKE profile + IPSec profile</p>
+<p><img src="45-create-ike-profile.png" /></p>
+<p><img src="46-create-ipsec-profile.png" /></p>
+<p>最后创建 VPN 会话, 选择前面自定义的 IKE profile + IPSec profile. 由于目前是隔离状态, VPN 会话是 down 的状态</p>
+<p><img src="47-create-ipsec-session.png" /></p>
+]]></content>
+      <categories>
+        <category>VMware</category>
+        <category>NSX-T</category>
+        <category>NSX-V</category>
+      </categories>
+      <tags>
+        <tag>VMware</tag>
+        <tag>NSX-T</tag>
+        <tag>NSX-V</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>迁移 NSX-V 到 NSX-T: Lift &amp; Shift - 2 部署 Edge Bridge 并迁移</title>
+    <url>/3148157594/</url>
+    <content><![CDATA[<p>继续介绍如何使用 Lift &amp; Shift + Edge 桥接的方式来迁移现存的 NSX-V 环境到 NSX-T. 这部分将准备新的 NSX-T Edge 集群将 NSX-V 和 NSX-T 的逻辑网段进行桥接, 然后迁移工作负载. <span id="more"></span></p>
+<h2 id="创建并配置桥接所用的-nsx-t-edge-集群">创建并配置桥接所用的 NSX-T Edge 集群</h2>
+<h3 id="准备主机端口组">准备主机端口组</h3>
+<p>在原始 NSX-V 环境创建 VDS Trunk 端口组:</p>
+<p><img src="48-prepare-trunking-port-group.png" /></p>
+<p>并且在需要桥接的 NSX-V virtualwire 端口组安全设置打开 Promiscuous mode + Forged transmit:</p>
+<p><img src="49-prepare-segment-security.png" /></p>
+<p>实际上也可以开启 MAC learning 而不使用 Promiscuous. 只是在 vSphere 7 环境下开启 MAC learning 只能通过 API 完成, 而 vSphere 8 则提供了图形界面的方式来启用 MAC learning.</p>
+<div class="note info"><p>开启 Promiscuous 会对网络性能产生一定影响, 如果无法接受则需使用 MAC learning</p>
+</div>
+<h3 id="部署并配置-bridge-edge-集群">部署并配置 Bridge Edge 集群</h3>
+<p>在原始启用了 NSX-V 的主机集群上部署 NSX-T Edge 节点, 第一个 vNIC 连接管理网络, 第二个 vNIC 连接 Trunk VDS 端口组, 第三个 vNIC 连接目标 NSX-V 逻辑网段:</p>
+<p><img src="50-bridge-edge-networking-seg-a.png" /></p>
+<p>每一个需要桥接的逻辑网段需要一个 Bridge Edge Cluster. 这里总共有三个逻辑网段, 因此需要三个 Bridge Edge Cluster. 每个 Cluster 里至少有一个 Edge Node (如果做高可用则需要两个)</p>
+<p>然后配置 Bridge Edge 节点. 每个 Bridge Edge 里将运行两个 NVDS, 一个用于 NSX-T 的 overlay 一个用于桥接, 因此对应的需要两种不同的上行链路配置.</p>
+<p>首先是 overlay 的上行链路配置:</p>
+<p><img src="53-bridge-overlay-uplink.png" /></p>
+<p>然后是桥接的上行链路配置, transport vlan id 设置为 0:</p>
+<p><img src="54-bridge-uplink.png" /></p>
+<p>配置 Bridge Edge 节点, 每个 Edge 节点内创建两个 NVDS: 一个用于 NSX-T 的 overlay 流量, 对应使用的是 overlay 的上行配置</p>
+<p><img src="55-edge-overlay-nvds.png" /></p>
+<p>另一个用于桥接流量, 对应使用桥接的上行</p>
+<p><img src="56-edge-bridge-nvds.png" /></p>
+<p>然后为每个需要桥接的逻辑网段创建 Bridge Edge Cluster. 这里创建了三个单节点集群.</p>
+<h3 id="创建桥接连接-nsx-v-和-nsx-t-逻辑网段">创建桥接连接 NSX-V 和 NSX-T 逻辑网段</h3>
+<p>创建 bridge profile, 关联对应的 Edge cluster, 并选择 primary node</p>
+<p><img src="59-bridge-profile.png" /></p>
+<p>每个需要桥接的逻辑网段都需要一个 bridge profile 关联到对应的 Edge cluster. 最后一共是三个配置:</p>
+<p><img src="60-all-bridge-profiles.png" /></p>
+<p>然后到 NSX-T 的各个 segment 下配置桥接: Additional Settings -&gt; Edge Bridges, ADD EDGE BRIDGE</p>
+<p><img src="61-bridge-to-segment.png" /></p>
+<p>选择对应的 bridge profile, 选择 vlan transport zone, vlan id 使用 0.</p>
+<p>桥接配置到此就完成了, 可以用 ssh 登入到各个 Bridge Edge 节点检查服务是否正常:</p>
+<p><img src="63-get-bridge.png" /></p>
+<p>然后可以迁移几个测试虚拟机来验证桥接的连通性. 到此为止, 所有的准备和验证工作都可以在迁移之前完成, 而不会影响到现有的工作负载.</p>
+<h2 id="迁移工作负载并切换网络">迁移工作负载并切换网络</h2>
+<p>到了真正迁移的时间, 使用 enhanced vMotion 将所有工作负载迁移到新的 vDC 下, 迁移时目的地选择 NSX-T 的逻辑网段. 取决于工作负载的规模, 这个过程可能会很长. 但是如果前面桥接配置正确, 则这段时间内业务流量不会受到影响.</p>
+<p>然后就需要做网关的切换和最后的调整, 这部分配置修改会导致流量短暂中断</p>
+<ul>
+<li>断开 NSX-V 侧所有 ESG/LDR 的连接</li>
+<li>将 NSX-T 所有 overlay segment 连接到网关: Seg-A/B 连接到 corp-t0-gw, Seg-C 连接到 corp-t1-ext. 将 internal-lb 连接到 corp-t1-standalone</li>
+<li>修正 NSX-T VLAN segment 的 vlan id: 0 -&gt; 11</li>
+<li>刷新物理路由器上 Tier-0 的 ARP 缓存</li>
+<li>修改 Tier-0 上 bgp 邻居更新源, 使用 VPN tunnel 地址</li>
+</ul>
+<p>这些步骤即使手工操作也可以在五分钟内完成. 如果提前准备了 API 调用脚本则可以进一步缩短流量中断时间. 迁移完成并验证后就可以清理 NSX-V 环境了.</p>
+<h2 id="关于特定工作负载的考量">关于特定工作负载的考量</h2>
+<p>相对于就地迁移方案, Lift &amp; Shift + 桥接的方案虽然更加复杂, 但是需要的停机时间会显著缩短. 对维护停机时间有高度要求的企业可能会更倾向于这种方案. 然而企业在选择迁移方案时还需要考虑迁移方案对上层工作负载带来的影响.</p>
+<p>Lift &amp; Shift + 桥接的方法会将工作负载迁移到一个新的 vDC 上, 对应的就是一套新的主机/存储/网络环境. 大部分情况下这种变化对上层工作负载是透明的, 然而有时候却并不总是这样. 现在很多容器平台和底层云/虚拟化平台有深度的整合. 如果在容器平台之外修改了底层云/虚拟化环境, 那么容器平台的 cloud provider 配置可能会处于不一致/不可用的状态. 此外对于容器平台某些类型的持久卷, 直接迁移其底层的存储也可能会引起持久卷的丢失. 凡此种种都是迁移规划和方案选择时需要考虑的问题.</p>
+]]></content>
+      <categories>
+        <category>VMware</category>
+        <category>NSX-T</category>
+        <category>NSX-V</category>
+      </categories>
+      <tags>
+        <tag>VMware</tag>
+        <tag>NSX-T</tag>
+        <tag>NSX-V</tag>
+      </tags>
+  </entry>
 </search>
